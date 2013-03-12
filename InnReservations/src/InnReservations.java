@@ -22,6 +22,17 @@ import java.awt.GridLayout;
 import javax.swing.JScrollBar;
 import javax.swing.border.TitledBorder;
 import java.awt.FlowLayout;
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+
 import javax.swing.JTextField;
 
 
@@ -31,11 +42,110 @@ public class InnReservations {
 	private JTable table;
 	private JTextField textField;
 	private JTextField textField_1;
+	private static Connection conn;
 
 	/**
 	 * Launch the application.
 	 */
+
 	public static void main(String[] args) {
+		BufferedReader in = null;
+		String username = null, password = null, url = null;
+		try {
+			in = new BufferedReader(new FileReader("ServerSettings.txt"));
+			url = in.readLine();
+			username = in.readLine();
+			password = in.readLine();
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(1);
+		} 
+		
+		System.out.println(url);
+		System.out.println(username);
+		System.out.println(password);
+		   
+        try {
+            Class.forName("oracle.jdbc.OracleDriver");
+        }
+        catch (Exception ex)
+        {
+            System.out.println("Driver not found");
+        };
+
+        conn = null;
+        try { 
+           conn = DriverManager.getConnection(url, username, password);
+        }
+        catch (Exception ex)
+        {
+            System.out.println("Could not open connection");
+        };
+       
+        System.out.println("Connected");
+
+        if (!tableExists("Rooms"))
+        	createRoomsTable();
+        
+        if (!tableExists("Reservations"))
+        	createReservations();
+        /*
+        try
+        {
+	        Statement s1 = conn.createStatement();
+	        ResultSet result = s1.executeQuery("SELECT table_name " + 
+	                                           "FROM user_tables " +
+	        		                           "WHERE table_name = 'Rooms' OR " +
+	        		                                 "table_name = 'Reservations'");
+			if (result.next() && result.next())
+				System.out.println("Both exist!");
+			else {
+				System.out.println("Both do not exist!");
+				Statement s2 = conn.createStatement();
+				Statement s3 = conn.createStatement();
+		        String table1 = "CREATE TABLE Rooms ( " +
+		        		"RoomId VARCHAR(3) PRIMARY KEY, " +
+		        		"roomName VARCHAR(24), " +
+		        		"beds INTEGER, " +
+		        		"bedType VARCHAR(6), " +
+		        		"maxOccupancy INTEGER, " +
+		        		"basePrice INTEGER, " +
+		        		"decor VARCHAR(11), " +
+		        		"UNIQUE(roomName) " +
+		        		")";
+
+		        String table2 = "CREATE TABLE Reservations ( " +
+		        		"Code INTEGER PRIMARY KEY, " +
+		        		"Room VARCHAR(3) REFERENCES Rooms, " +
+		        		"CheckIn DATE, " +
+		        		"CheckOut DATE, " +
+		        		"Rate FLOAT, " +
+		        		"LastName VARCHAR(13), " +
+		        		"FirstName VARCHAR(10), " +
+		        		"Adults INTEGER, " +
+		        		"Kids INTEGER " +
+		        		")";
+		        s2.executeUpdate(table1);
+		        s3.executeUpdate(table2);
+			}
+        }
+        catch (Exception ee)
+        {
+        	System.out.println(ee);
+        	System.exit(1);
+        }
+        */
+        
+        try {
+            conn.close();
+        }
+        catch (Exception ex)
+        {
+            System.out.println("Unable to close connection");
+        }; 
+        
+        System.out.println("Closed connection");
+		
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
 				try {
@@ -46,6 +156,38 @@ public class InnReservations {
 				}
 			}
 		});
+	}
+
+	private static void createReservations() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	private static void createRoomsTable() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	private static boolean tableExists(String string) {
+		String query = "SELECT table_name " + 
+				       "FROM user_tables " +
+                       "WHERE table_name = '?'";
+		try {
+			PreparedStatement ps = conn.prepareStatement(query);
+			ps.setString(1, string);
+			ResultSet result = ps.executeQuery();
+			if (result.next()) {
+				System.out.println(result.getString(1));
+				return true;
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.out.println(e);
+			System.exit(1);
+		}
+		
+		System.out.println("Not found");
+		return false;
 	}
 
 	/**
