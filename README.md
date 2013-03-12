@@ -1,6 +1,6 @@
 bed-and-breakfast
 =================
 
-Authors: Luke Larson, ...
+Authors: Luke Larson, ....
 Bed and breakfast database application in Java.
 
