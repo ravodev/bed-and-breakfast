@@ -22,20 +22,28 @@ where rooms.roomid = reservations.roomid and
 
 -- OR-1 Range of Dates
 
---FULLY Occupied: NOT EXISTS day where room is Empty
-select roomname, 'Fully Occupied'
-from rooms r, reservations v
-where r.roomid = v.roomid
-    NOT EXISTS
-      (select * from rooms r1, reservations v1
-        where r1.roomid = v1.roomid and
-        v1.checkin <=  and --end date
-        v1.checkout >      -- start date
-        )
 
--- PARTIALLY Occupied: EXISTS day where room is empty and EXISTS day where room is empty
 
--- EMPTY: NOT EXISTS day where room is Occupied
+-- IF FULLY OCCUPIED Returns no Tuples
+-- IF PARTIALLY OCCUPIED Returns some Tuples
+select checkout, nextin
+from (select roomid, checkout, lead(checkin) over (order by checkin) nextin
+      from reservations
+      where roomid = 'RND')
+where checkout <> nextin and
+      checkout >= to_date('01-JAN-2010', 'DD-MON-YYYY') and
+      nextin <= to_date('11-JAN-2010', 'DD-MON-YYYY'); 
+
+
+-- RETURNS No tuples if the room is EMPTY during the range
+select roomid, checkin, checkout
+from reservations
+where roomid = 'RND' and ((checkin <= to_date('29-MAR-2010', 'DD-MON-YYYY') and
+       checkout <= to_date('12-APR-2010', 'DD-MON-YYYY')) or
+       (checkin >= to_date('29-MAR-2010', 'DD-MON-YYYY') and
+         checkin < to_date('12-APR-2010', 'DD-MON-YYYY')) or
+       (checkout < to_date('12-APR-2010', 'DD-MON-YYYY') and
+        checkout > to_date('29-MAR-2010', 'DD-MON-YYYY')));
 
 
 -- OR-2
