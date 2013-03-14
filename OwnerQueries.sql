@@ -26,24 +26,32 @@ where rooms.roomid = reservations.roomid and
 
 -- IF FULLY OCCUPIED Returns no Tuples
 -- IF PARTIALLY OCCUPIED Returns some Tuples
+
+select count(*)
+from(
 select checkout, nextin
 from (select roomid, checkout, lead(checkin) over (order by checkin) nextin
       from reservations
       where roomid = 'RND')
 where checkout <> nextin and
       checkout >= to_date('01-JAN-2010', 'DD-MON-YYYY') and
-      nextin <= to_date('11-JAN-2010', 'DD-MON-YYYY'); 
+      nextin <= to_date('13-JAN-2010', 'DD-MON-YYYY')
+); 
 
 
--- RETURNS No tuples if the room is EMPTY during the range
-select roomid, checkin, checkout
+
+select r1.roomid, 'Empty' as Status
+from rooms r1
+where r1.roomid NOT IN (
+select roomid
 from reservations
-where roomid = 'RND' and ((checkin <= to_date('29-MAR-2010', 'DD-MON-YYYY') and
-       checkout <= to_date('12-APR-2010', 'DD-MON-YYYY')) or
+where roomid = r1.roomid and ((checkin <= to_date('29-MAR-2010', 'DD-MON-YYYY') and
+       checkout > to_date('10-APR-2010', 'DD-MON-YYYY')) or
        (checkin >= to_date('29-MAR-2010', 'DD-MON-YYYY') and
-         checkin < to_date('12-APR-2010', 'DD-MON-YYYY')) or
-       (checkout < to_date('12-APR-2010', 'DD-MON-YYYY') and
-        checkout > to_date('29-MAR-2010', 'DD-MON-YYYY')));
+         checkin < to_date('10-APR-2010', 'DD-MON-YYYY')) or
+       (checkout < to_date('10-APR-2010', 'DD-MON-YYYY') and
+        checkout > to_date('29-MAR-2010', 'DD-MON-YYYY')))
+);
 
 
 -- OR-2
