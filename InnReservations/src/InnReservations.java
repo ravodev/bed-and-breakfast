@@ -14,6 +14,7 @@ import com.jgoodies.forms.layout.RowSpec;
 import javax.swing.JButton;
 import javax.swing.BoxLayout;
 import javax.swing.JDialog;
+import javax.swing.JOptionPane;
 import javax.swing.JTable;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableModel;
@@ -23,6 +24,8 @@ import java.awt.Dimension;
 import java.awt.GridLayout;
 import javax.swing.JScrollBar;
 import javax.swing.border.TitledBorder;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import javax.swing.event.TableModelListener;
 
 import java.awt.FlowLayout;
@@ -68,15 +71,86 @@ public class InnReservations {
 	private static int adminRoomCount;
 	private static Vector<String> adminColumns;
 	private static Vector<Vector<String>> adminData;
+	
+	
 	private JTable tblGuestDetailedRoomInfo;
 	private JTable tblGuestOutputPanel;
+	private TableColumnAdjuster guestOutputPanelTca;
+	private TableColumnAdjuster tblGuestDetailedRoomInfoTca;
 	private JTextField textFieldGuestOutputPanelHeaderCheckin;
 	private JTextField textFieldGuestOutputPanelHeaderCheckOut;
+
+	
+	private class RowListener implements ListSelectionListener {
+		public void valueChanged(ListSelectionEvent event) {
+			if (event.getValueIsAdjusting()) {
+				return;
+			}
+			int i = tblGuestOutputPanel.getSelectionModel().getLeadSelectionIndex();
+			
+			if (!tableExists("Rooms"))
+				return;
+			
+			String query = "SELECT * " +
+		                   "FROM Rooms " +
+					       "WHERE RoomId = '" + tblGuestOutputPanel.getValueAt(i, 0) + "'";
+			
+			Vector<String> tableColumns = new Vector<String>();
+			Vector<Vector<String>> tableData = new Vector<Vector<String>>();
+			
+			try {
+				Statement s = conn.createStatement();
+				ResultSet rs = s.executeQuery(query);
+				ResultSetMetaData md = rs.getMetaData();
+		        int columns = md.getColumnCount();
+		        
+	            tableColumns.addElement("Attribute");
+	            tableColumns.addElement("Value");
+		        
+				rs.next();
+				
+				for (int i1 = 1; i1 <= columns; i1++) {
+					Vector<String> row = new Vector<String>(2);
+					
+					row.addElement(md.getColumnName(i1));
+	                row.addElement(rs.getString(i1));
+
+	                tableData.addElement(row);
+				}
+				
+			} catch (SQLException e) {
+				System.err.println(e);
+				System.exit(1);
+			}
+			
+			tblGuestDetailedRoomInfo.setModel(new DefaultTableModel(
+					tableData,
+					tableColumns
+				));
+			
+			tblGuestDetailedRoomInfoTca.adjustColumns();
+		}
+	}
+	 
+//	private void outputSelection() {
+//		output.append(String.format("Lead: %d, %d. ",
+//				table.getSelectionModel().getLeadSelectionIndex(),
+//				table.getColumnModel().getSelectionModel().
+//				getLeadSelectionIndex()));
+//		output.append("Rows:");
+//		for (int c : table.getSelectedRows()) {
+//			output.append(String.format(" %d", c));
+//		}
+//		output.append(". Columns:");
+//		for (int c : table.getSelectedColumns()) {
+//			output.append(String.format(" %d", c));
+//		}
+//		output.append(".\n");
+//	}
 
 	/**
 	 * Launch the application.
 	 */
-
 	public static void main(String[] args) {
 		BufferedReader in = null;
 		String username = null, password = null, url = null;
@@ -883,7 +957,7 @@ public class InnReservations {
 		guestPanel.add(guestLeftPanel, BorderLayout.WEST);
 		guestLeftPanel.setLayout(new FormLayout(new ColumnSpec[] {
 				FormFactory.LABEL_COMPONENT_GAP_COLSPEC,
-				ColumnSpec.decode("min:grow"),
+				ColumnSpec.decode("100dlu:grow"),
 				FormFactory.RELATED_GAP_COLSPEC,},
 			new RowSpec[] {
 				FormFactory.LINE_GAP_ROWSPEC,
@@ -896,7 +970,12 @@ public class InnReservations {
 				RowSpec.decode("default:grow"),}));
 		
 		JButton btnGuestRR = new JButton("Rooms & Rates");
-		guestLeftPanel.add(btnGuestRR, "2, 2, left, top");
+		btnGuestRR.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				displayRoomAndRates();
+			}
+		});
+		guestLeftPanel.add(btnGuestRR, "2, 2, fill, top");
 		
 		JButton btnGuestReservations = new JButton("Reservations");
 		guestLeftPanel.add(btnGuestReservations, "2, 4");
@@ -908,7 +987,9 @@ public class InnReservations {
 		guestLeftPanel.add(spGuestDetailedRoomInfo, "2, 8, fill, fill");
 		
 		tblGuestDetailedRoomInfo = new JTable();
+		tblGuestDetailedRoomInfo.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 		spGuestDetailedRoomInfo.setViewportView(tblGuestDetailedRoomInfo);
+		tblGuestDetailedRoomInfoTca = new TableColumnAdjuster(tblGuestDetailedRoomInfo);
 		
 		JPanel guestOutputPanel = new JPanel();
 		guestPanel.add(guestOutputPanel, BorderLayout.CENTER);
@@ -918,7 +999,11 @@ public class InnReservations {
 		guestOutputPanel.add(spGuestOutputPanel, BorderLayout.CENTER);
 		
 		tblGuestOutputPanel = new JTable();
+		tblGuestOutputPanel.setSurrendersFocusOnKeystroke(true);
+		guestOutputPanelTca = new TableColumnAdjuster(tblGuestOutputPanel);
 		spGuestOutputPanel.setViewportView(tblGuestOutputPanel);
+		
+		tblGuestOutputPanel.getSelectionModel().addListSelectionListener(new RowListener());
 		
 		JPanel guestOutputPanelHeader = new JPanel();
 		FlowLayout fl_guestOutputPanelHeader = (FlowLayout) guestOutputPanelHeader.getLayout();
@@ -929,11 +1014,13 @@ public class InnReservations {
 		guestOutputPanelHeader.add(lblGuestOutputPanelHeader);
 		
 		textFieldGuestOutputPanelHeaderCheckin = new JTextField();
+		textFieldGuestOutputPanelHeaderCheckin.setText("01-JAN-10");
 		textFieldGuestOutputPanelHeaderCheckin.setToolTipText("CheckIn");
 		guestOutputPanelHeader.add(textFieldGuestOutputPanelHeaderCheckin);
 		textFieldGuestOutputPanelHeaderCheckin.setColumns(10);
 		
 		textFieldGuestOutputPanelHeaderCheckOut = new JTextField();
+		textFieldGuestOutputPanelHeaderCheckOut.setText("20-JAN-10");
 		textFieldGuestOutputPanelHeaderCheckOut.setToolTipText("CheckOut");
 		guestOutputPanelHeader.add(textFieldGuestOutputPanelHeaderCheckOut);
 		textFieldGuestOutputPanelHeaderCheckOut.setColumns(10);
@@ -944,6 +1031,86 @@ public class InnReservations {
 		guestOutputPanel.add(guestOutputPanelFooter, BorderLayout.SOUTH);
 		
 		JButton btnCheckOutputFooterCA = new JButton("Check Availability");
+		btnCheckOutputFooterCA.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				String start = textFieldGuestOutputPanelHeaderCheckin.getText();
+				String end = textFieldGuestOutputPanelHeaderCheckOut.getText();
+				String rm = (String) tblGuestOutputPanel.getValueAt(
+						tblGuestOutputPanel.getSelectionModel().getLeadSelectionIndex(),
+						0);
+				String query = String.format("( " +
+						"SELECT d.curdate, 'Not occupied', " +
+						"      CASE " +
+						"         WHEN TO_CHAR(d.curdate) = '01-JAN-10' THEN rm.basePrice * 1.25 " +
+						"         WHEN TO_CHAR(d.curdate) = '04-JUL-10' THEN rm.basePrice * 1.25 " +
+						"         WHEN TO_CHAR(d.curdate) = '06-SEP-10' THEN rm.basePrice * 1.25 " +
+						"         WHEN TO_CHAR(d.curdate) = '30-OCT-10' THEN rm.basePrice * 1.25 " +
+						"         WHEN TO_CHAR(d.curdate, 'FMDAY') = 'MONDAY' THEN rm.basePrice " +
+						"         WHEN TO_CHAR(d.curdate, 'FMDAY') = 'TUESDAY' THEN rm.basePrice   " +
+						"         WHEN TO_CHAR(d.curdate, 'FMDAY') = 'WEDNESDAY' THEN rm.basePrice   " +
+						"         WHEN TO_CHAR(d.curdate, 'FMDAY') = 'THURSDAY' THEN rm.basePrice   " +
+						"         WHEN TO_CHAR(d.curdate, 'FMDAY') = 'FRIDAY' THEN rm.basePrice   " +
+						"         WHEN TO_CHAR(d.curdate, 'FMDAY') = 'SATURDAY' THEN rm.basePrice * 1.10 " +
+						"         WHEN TO_CHAR(d.curdate, 'FMDAY') = 'SUNDAY' THEN rm.basePrice * 1.10  " +
+						"      END AS Price " +
+						"FROM (SELECT to_date('%s') + rownum - 1 AS CurDate " +
+						"      FROM reservations  " +
+						"      WHERE rownum <= to_date('%s') - to_date('%s') + 1) d, " +
+						"     reservations r, " +
+						"     rooms rm " +
+						"WHERE r.room = '%s' and rm.roomid = r.room and " +
+						"      d.curdate not in (SELECT d.curdate " +
+						"                        FROM (SELECT to_date('%s') + rownum - 1 AS CurDate " +
+						"                              FROM reservations " +
+						"                              WHERE rownum <= to_date('%s') - to_date('%s') + 1) d, " +
+						"                             reservations r " +
+						"                        WHERE r.room = '%s' and " +
+						"                              d.curdate between r.checkin and r.checkout-1) " +
+						") " +
+						"UNION " +
+						"( " +
+						"SELECT d.curdate, 'Occupied', NULL " +
+						"FROM (SELECT to_date('%s') + rownum - 1 AS CurDate " +
+						"      FROM reservations " +
+						"      WHERE rownum <= to_date('%s') - to_date('%s') + 1) d, " +
+						"     reservations r " +
+						"WHERE r.room = '%s' and " +
+						"      d.curdate between r.checkin and r.checkout-1 " +
+						") " +
+						"ORDER BY 1", start, end, start, rm, start, end, start, rm, start, end, start, rm);
+				
+				Vector<String> dataColumns = new Vector<String>();
+				Vector<Vector<String>> data = new Vector<Vector<String>>();
+				
+				try {
+					Statement s = conn.createStatement();
+					ResultSet rs = s.executeQuery(query);
+					ResultSetMetaData md = rs.getMetaData();
+			        int columns = md.getColumnCount();
+			        
+			        for (int i = 1; i <= columns; i++)
+			        	dataColumns.addElement(md.getColumnName(i));
+			        
+					while (rs.next()) {
+						Vector<String> row = new Vector<String>(columns);
+
+		                for (int i = 1; i <= columns; i++)
+		                    row.addElement(rs.getString(i));
+
+		                data.addElement(row);
+					}
+					
+				} catch (SQLException e1) {
+					System.err.println(e1);
+					System.exit(1);
+				}
+				
+				
+				TableDialog dialog = new TableDialog(dataColumns, data);
+				dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+				dialog.setVisible(true);
+			}
+		});
 		guestOutputPanelFooter.add(btnCheckOutputFooterCA);
 		
 		JButton btnCheckOutputFooterPR = new JButton("Place a Reservation");
@@ -1083,6 +1250,63 @@ public class InnReservations {
 		adminTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 		adminTca = new TableColumnAdjuster(adminTable);
 		scrollPane.setViewportView(adminTable);
+	}
+
+	protected String guestGetAvailability() {
+		StringBuilder sb = new StringBuilder();
+		int i = tblGuestOutputPanel.getSelectionModel().getLeadSelectionIndex();
+		
+//		SELECT d.curdate, 'Occupied', r.checkin, r.checkout
+//		FROM (SELECT to_date('02-JAN-10') + rownum - 1 AS CurDate
+//		      FROM reservations
+//		      WHERE rownum <= to_date('01-MAY-10') - to_date('02-JAN-10') + 1) d,
+//		     reservations r
+//		WHERE r.room = 'TAA' and
+//		      d.curdate between r.checkin and r.checkout-1;
+		
+		return "Test";
+	}
+
+	protected void displayRoomAndRates() {
+		
+		if (tableExists("Rooms")) {
+			Vector<String> tableColumns = new Vector<String>();
+			 Vector<Vector<String>> tableData = new Vector<Vector<String>>();
+			
+			String query = "SELECT roomid, roomname " +
+		                   "FROM Rooms";
+			
+			Statement s;
+			try {
+				s = conn.createStatement();
+				ResultSet rs = s.executeQuery(query);
+				ResultSetMetaData md = rs.getMetaData();
+		        int columns = md.getColumnCount();
+		        
+		        for (int i = 1; i <= columns; i++)
+		        	tableColumns.addElement(md.getColumnName(i));
+		        
+				while (rs.next()) {
+					Vector<String> row = new Vector<String>(columns);
+
+	                for (int i = 1; i <= columns; i++)
+	                    row.addElement(rs.getString(i));
+
+	                tableData.addElement(row);
+				}
+				s.close();
+			} catch (SQLException e) {
+				System.err.println(e);
+				System.exit(1);
+			}
+			
+			tblGuestOutputPanel.setModel(new DefaultTableModel(
+					tableData,
+					tableColumns
+				));
+			
+			guestOutputPanelTca.adjustColumns();
+		}
 	}
 
 	protected void removeDB() {
