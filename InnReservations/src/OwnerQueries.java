@@ -18,8 +18,35 @@ private void viewOccupancy(String startDate, String endDate) {
 
 /* Handles OR-1 case where range of dates is given. */
 private void twoDateOccupancyQuery(String startDate, String endDate){
-   List<String> emptyRooms = findEmptyRoomsInRange(startDate, endDate);
+    List<String> emptyRooms = findEmptyRoomsInRange(startDate, endDate);
+    List<String> fullyOccupiedRooms = findOccupiedRoomsInRange(startDate, endDate, emptyRooms);
+    List<String> partiallyOccupiedRooms = 
+        (generateListOfAllRoomIDS().removeAll(emptyRooms)).removeAll(fullyOccupiedRooms);
 
+    occupancyColumns = new Vector<String>();
+    occupancyData = new Vector<Vector<String>>();
+    occupancyColumns.addElement("RoomId");
+    occupancyColumns.addElement("Occupancy Status");
+
+    for(String room: emptyRooms) {
+        Vector<String> row = new Vector<String>();
+        row.addElement(room);
+        row.addElement("Empty");
+        occupancyData.addElement(row);
+    }
+    for(String room: fullyOccupiedRooms) {
+        Vector<String> row = new Vector<String>();
+        row.addElement(room);
+        row.addElement("Fully Occupied");
+        occupancyData.addElement(row);
+    }
+    for(String room: partiallyOccupiedRooms) {
+        Vector<String> row = new Vector<String>();
+        row.addElement(room);
+        row.addElement("Partially Occupied");
+        occupancyData.addElement(row);
+    }
+    return occupancyData;
 }
 
 /* Finds and returns the list of rooms that are completely empty. */
@@ -72,8 +99,9 @@ private List<String> generateListOfAllRoomIDS() {
     return ArrayList<String>(Arrays.asList(room));
 }
 
-private void findOccupiedRoomsInRange(String startDate, String endDate, String<List> emptyRooms) {
+private List<String> findOccupiedRoomsInRange(String startDate, String endDate, String<List> emptyRooms) {
     ArrayList<String> nonEmptyRooms = generateListOfAllRoomIDS().removeAll(emptyRooms);
+    ArrayList<String> fullyOccupiedRooms = new ArrayList<String>();
     String occupiedRoomsQuery = "select count(*) " +
                                 "from(" +
                                 "select checkout, nextin " +
@@ -88,11 +116,18 @@ private void findOccupiedRoomsInRange(String startDate, String endDate, String<L
         /* Check if each room is completely occupied. */
         for(String room: nonEmptyRooms) {
             oq.setString(1, room);
-            conn.executeQuery();
-            
+            ResultSet result = conn.executeQuery();
+            result.next();
+            /* If the count is 0, the room is fully occupied. Else it is partially occupied. */
+            if(0 == result.getInt(1)) {
+                fullyOccupiedRooms.add(room);
+            }
+            oq.clearParameters();
         }
     } catch (SQLException e) {
-        System.out.println("Occupied Query Failed.")
+        System.out.println("Occupied Query Failed.");
+        return null;
     }
+    return fullyOccupiedRooms;
 }
 
