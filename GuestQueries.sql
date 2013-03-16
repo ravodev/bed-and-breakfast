@@ -14,21 +14,26 @@ FROM Rooms;
 
 --- iterate through (CheckOut-CheckIn) amount of times in java, parameterize CurDate and the
 --- dates in the IN statement
+(
 SELECT '22-OCT-10' AS CurDate, 'Occupied' AS Status
 FROM Rooms rm, Reservations res
-WHERE res.Room = rm.ID AND res.Room = 'AOB' AND 
-	res.ID IN (SELECT res.ID
-				FROM Reservations res
-				WHERE res.CheckIn <= '22-OCT-10' AND
-				res.CheckOut > '22-OCT-10')
+WHERE res.Room = rm.RoomId AND
+      res.RoomId = 'AOB' AND 
+	  res.Code IN (SELECT Code
+				   FROM Reservations
+				   WHERE CheckIn <= '22-OCT-10' AND
+				         CheckOut > '22-OCT-10');
+)
 UNION
+(
 SELECT '22-OCT-10' AS CurDate, (parameterized price from R-3) AS Status
 FROM Rooms rm, Reservations res
 WHERE res.Room = rm.ID AND res.Room = 'AOB' AND 
 	res.ID NOT IN (SELECT res.ID
 				FROM Reservations res
 				WHERE res.CheckIn <= '22-OCT-10' AND
-				res.CheckOut > '22-OCT-10');
+				res.CheckOut > '22-OCT-10')
+                );
 				
 
 																			

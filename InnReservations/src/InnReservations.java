@@ -49,8 +49,9 @@ import java.awt.event.ActionEvent;
 
 
 public class InnReservations {
-	private JFrame frmBedBreakfast;
-	private static Connection conn = null;
+	public JFrame frmBedBreakfast;
+	public static Connection conn = null;
+	public InnReservations window;
 	
 	// Guest panel variables
 	
@@ -73,12 +74,12 @@ public class InnReservations {
 	private static Vector<Vector<String>> adminData;
 	
 	
-	private JTable tblGuestDetailedRoomInfo;
-	private JTable tblGuestOutputPanel;
+	public JTable tblGuestDetailedRoomInfo;
+	public JTable tblGuestOutputPanel;
 	private TableColumnAdjuster guestOutputPanelTca;
 	private TableColumnAdjuster tblGuestDetailedRoomInfoTca;
-	private JTextField textFieldGuestOutputPanelHeaderCheckin;
-	private JTextField textFieldGuestOutputPanelHeaderCheckOut;
+	public JTextField textFieldGuestOutputPanelHeaderCheckin;
+	public JTextField textFieldGuestOutputPanelHeaderCheckOut;
 
 	
 	private class RowListener implements ListSelectionListener {
@@ -933,6 +934,7 @@ public class InnReservations {
 	 * Create the application.
 	 */
 	public InnReservations() {
+		window = this;
 		initialize();
 	}
 
@@ -1039,7 +1041,7 @@ public class InnReservations {
 						tblGuestOutputPanel.getSelectionModel().getLeadSelectionIndex(),
 						0);
 				String query = String.format("( " +
-						"SELECT d.curdate, 'Not occupied', " +
+						"SELECT TO_CHAR(d.curdate, 'DD-MON-YY') AS Day, 'Not occupied' AS Status, " +
 						"      CASE " +
 						"         WHEN TO_CHAR(d.curdate) = '01-JAN-10' THEN rm.basePrice * 1.25 " +
 						"         WHEN TO_CHAR(d.curdate) = '04-JUL-10' THEN rm.basePrice * 1.25 " +
@@ -1055,24 +1057,24 @@ public class InnReservations {
 						"      END AS Price " +
 						"FROM (SELECT to_date('%s') + rownum - 1 AS CurDate " +
 						"      FROM reservations  " +
-						"      WHERE rownum <= to_date('%s') - to_date('%s') + 1) d, " +
+						"      WHERE rownum < to_date('%s') - to_date('%s') + 1) d, " +
 						"     reservations r, " +
 						"     rooms rm " +
 						"WHERE r.room = '%s' and rm.roomid = r.room and " +
 						"      d.curdate not in (SELECT d.curdate " +
 						"                        FROM (SELECT to_date('%s') + rownum - 1 AS CurDate " +
 						"                              FROM reservations " +
-						"                              WHERE rownum <= to_date('%s') - to_date('%s') + 1) d, " +
+						"                              WHERE rownum < to_date('%s') - to_date('%s') + 1) d, " +
 						"                             reservations r " +
 						"                        WHERE r.room = '%s' and " +
 						"                              d.curdate between r.checkin and r.checkout-1) " +
 						") " +
 						"UNION " +
 						"( " +
-						"SELECT d.curdate, 'Occupied', NULL " +
+						"SELECT TO_CHAR(d.curdate, 'DD-MON-YY'), 'Occupied', NULL " +
 						"FROM (SELECT to_date('%s') + rownum - 1 AS CurDate " +
 						"      FROM reservations " +
-						"      WHERE rownum <= to_date('%s') - to_date('%s') + 1) d, " +
+						"      WHERE rownum < to_date('%s') - to_date('%s') + 1) d, " +
 						"     reservations r " +
 						"WHERE r.room = '%s' and " +
 						"      d.curdate between r.checkin and r.checkout-1 " +
@@ -1116,9 +1118,14 @@ public class InnReservations {
 		JButton btnCheckOutputFooterPR = new JButton("Place a Reservation");
 		btnCheckOutputFooterPR.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				ReservationCompletionForm dialog = new ReservationCompletionForm(frmBedBreakfast);
-				dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
-				dialog.setVisible(true);
+				if (reservationIsValid()) {
+					ReservationCompletionForm dialog = new ReservationCompletionForm(window);
+					dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+					dialog.setVisible(true);
+				}
+				else {
+					JOptionPane.showMessageDialog(null, "Atleast one of the days in the specified date range is occupied.");
+				}
 			}
 		});
 		guestOutputPanelFooter.add(btnCheckOutputFooterPR);
@@ -1250,6 +1257,38 @@ public class InnReservations {
 		adminTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 		adminTca = new TableColumnAdjuster(adminTable);
 		scrollPane.setViewportView(adminTable);
+	}
+
+	// Determines whether date range is valid for reservation
+	protected boolean reservationIsValid() {
+		String start = textFieldGuestOutputPanelHeaderCheckin.getText();
+		String end = textFieldGuestOutputPanelHeaderCheckOut.getText();
+		String rm = (String) tblGuestOutputPanel.getValueAt(
+				tblGuestOutputPanel.getSelectionModel().getLeadSelectionIndex(),
+				0);
+		String query = String.format(
+				"SELECT 'Occupied' " +
+				"FROM (SELECT to_date('%s') + rownum - 1 AS CurDate " +
+				"      FROM reservations " +
+				"      WHERE rownum < to_date('%s') - to_date('%s') + 1) d, " +
+				"     reservations r " +
+				"WHERE r.room = '%s' and " +
+				"      d.curdate between r.checkin and r.checkout-1 ", start, end, start, rm);
+	
+		try {
+			Statement s = conn.createStatement();
+			ResultSet result = s.executeQuery(query);
+			if (result.next()) {
+				return false;
+			}
+		}
+		catch (SQLException e) {
+			e.printStackTrace();
+			System.out.println(e);
+			System.exit(1);
+		}
+	
+		return true;
 	}
 
 	protected String guestGetAvailability() {
