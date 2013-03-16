@@ -54,6 +54,19 @@ else if AARP
 price = price * .85
 
 --- R-4
+select roomid, roomname
+from rooms r
+where roomid not in 
+	(select r1.roomid
+	 from rooms r1, reservations v1
+	 where r1.roomid = reservations.room and
+	       ((checkin <= to_date(startDate, 'DD-MON-YYYY') and
+	       	checkout > to_date(endDate, 'DD-MON-YYYY')) or
+	       	(checkin >= to_date(startDate, 'DD-MON-YYYY') and
+	       	 checkin < to_date(endDate, 'DD-MON-YYYY'))  or
+	       	(checkout > to_date(startDate, 'DD-MON-YYYY') and
+	       	 checkout < to_date(endDate, 'DD-MON-YYYY')))
+	);
 
 
 --- R-6
