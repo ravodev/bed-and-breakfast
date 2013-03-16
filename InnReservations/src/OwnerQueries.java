@@ -1,23 +1,22 @@
 /* Used to achieve OR-1 Requirement */
-private void viewOccupancy(String startDate, String endDate) {
-    if(!startDate.contains("2010")) {
+private Vector<Vector<String>> viewOccupancy(String startDate, String endDate) {
+    if(!startDate.contains("2010") and !startDate.contains('2011')) {
         startDate += "-2010";
     }
     if(endDate == null) {
-        oneDateOccupancyQuery(startDate);
-        return;
+        return oneDateOccupancyQuery(startDate);
     }
     else {
         if(!endDate.contains("2010")) {
             endDate += "-2010";
         }
-        twoDateOccupancyQuery(startDate, endDate);
+        return twoDateOccupancyQuery(startDate, endDate);
     }
 
 }
 
 /* Handles OR-1 case where range of dates is given. */
-private void twoDateOccupancyQuery(String startDate, String endDate){
+private Vector<Vector<String>> twoDateOccupancyQuery(String startDate, String endDate){
     List<String> emptyRooms = findEmptyRoomsInRange(startDate, endDate);
     List<String> fullyOccupiedRooms = findOccupiedRoomsInRange(startDate, endDate, emptyRooms);
     List<String> partiallyOccupiedRooms = 
@@ -109,13 +108,15 @@ private List<String> findOccupiedRoomsInRange(String startDate, String endDate, 
                                 "from reservations " + 
                                 "where roomid = '?') " +
                                 "where checkout <> nextin and " +
-                                "checkout >= to_date('01-JAN-2010', 'DD-MON-YYYY') and " +
-                                "nextin <= to_date('13-JAN-2010', 'DD-MON-YYYY')); ";
+                                "checkout >= to_date('?', 'DD-MON-YYYY') and " +
+                                "nextin <= to_date('?', 'DD-MON-YYYY')); ";
     try {
         PreparedStatement oq = conn.prepareStatement(occupiedRoomsQuery);
         /* Check if each room is completely occupied. */
         for(String room: nonEmptyRooms) {
             oq.setString(1, room);
+            oq.setString(2, startDate);
+            oq.setString(3, endDate);
             ResultSet result = conn.executeQuery();
             result.next();
             /* If the count is 0, the room is fully occupied. Else it is partially occupied. */
@@ -129,5 +130,245 @@ private List<String> findOccupiedRoomsInRange(String startDate, String endDate, 
         return null;
     }
     return fullyOccupiedRooms;
+}
+
+
+private void reservationMonthByMonthQuery(String query) {
+    String daysCountsQuery = "
+        select * 
+        from
+        ((select roomname, sum(checkout - checkin) as JAN
+        from reservations, rooms 
+        where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'JAN'
+        group by roomname)
+        NATURAL JOIN
+        (select roomname, sum(checkout - checkin) as FEB
+        from reservations, rooms 
+        where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'FEB'
+        group by roomname)
+        NATURAL JOIN
+        (select roomname, sum(checkout - checkin) as MAR
+        from reservations, rooms 
+        where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'MAR'
+        group by roomname)
+        NATURAL JOIN
+        (select roomname, sum(checkout - checkin) as APR
+        from reservations, rooms 
+        where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'APR'
+        group by roomname)
+        NATURAL JOIN
+        (select roomname, sum(checkout - checkin) as MAY
+        from reservations, rooms 
+        where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'MAY'
+        group by roomname)
+        NATURAL JOIN
+        (select roomname, sum(checkout - checkin) as JUN
+        from reservations, rooms 
+        where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'JUN'
+        group by roomname)
+        NATURAL JOIN
+        (select roomname, sum(checkout - checkin) as JUL
+        from reservations, rooms 
+        where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'JUL'
+        group by roomname)
+        NATURAL JOIN
+        (select roomname, sum(checkout - checkin) as AUG
+        from reservations, rooms 
+        where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'AUG'
+        group by roomname)
+        NATURAL JOIN
+        (select roomname, sum(checkout - checkin) as SEP
+        from reservations, rooms 
+        where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'SEP'
+        group by roomname)
+        NATURAL JOIN
+        (select roomname, sum(checkout - checkin) as OCT
+        from reservations, rooms 
+        where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'OCT'
+        group by roomname)
+        NATURAL JOIN
+        (select roomname, sum(checkout - checkin) as NOV
+        from reservations, rooms 
+        where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'NOV'
+        group by roomname)
+        NATURAL JOIN
+        (select roomname, sum(checkout - checkin) as DEC
+        from reservations, rooms 
+        where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'DEC'
+        group by roomname)
+        NATURAL JOIN 
+        (select roomname, sum(checkout - checkin) as Total
+        from reservations, rooms
+        where rooms.roomid = reservations.room
+        group by roomname));";
+    String reservationCountsQuery = "select * 
+        from
+        ((select roomname, count(*) as JAN
+        from reservations, rooms 
+        where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'JAN'
+        group by roomname)
+        NATURAL JOIN
+        (select roomname, count(*) as FEB
+        from reservations, rooms 
+        where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'FEB'
+        group by roomname)
+        NATURAL JOIN
+        (select roomname, count(*) as MAR
+        from reservations, rooms 
+        where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'MAR'
+        group by roomname)
+        NATURAL JOIN
+        (select roomname, count(*) as APR
+        from reservations, rooms 
+        where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'APR'
+        group by roomname)
+        NATURAL JOIN
+        (select roomname, count(*) as MAY
+        from reservations, rooms 
+        where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'MAY'
+        group by roomname)
+        NATURAL JOIN
+        (select roomname, count(*) as JUN
+        from reservations, rooms 
+        where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'JUN'
+        group by roomname)
+        NATURAL JOIN
+        (select roomname, count(*) as JUL
+        from reservations, rooms 
+        where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'JUL'
+        group by roomname)
+        NATURAL JOIN
+        (select roomname, count(*) as AUG
+        from reservations, rooms 
+        where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'AUG'
+        group by roomname)
+        NATURAL JOIN
+        (select roomname, count(*) as SEP
+        from reservations, rooms 
+        where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'SEP'
+        group by roomname)
+        NATURAL JOIN
+        (select roomname, count(*) as OCT
+        from reservations, rooms 
+        where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'OCT'
+        group by roomname)
+        NATURAL JOIN
+        (select roomname, count(*) as NOV
+        from reservations, rooms 
+        where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'NOV'
+        group by roomname)
+        NATURAL JOIN
+        (select roomname, count(*) as DEC
+        from reservations, rooms 
+        where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'DEC'
+        group by roomname)
+        NATURAL JOIN 
+        (select roomname, count(*) as Total
+        from reservations, rooms
+        where rooms.roomid = reservations.room
+        group by roomname));";
+
+    String revenuesQuery = "select * 
+        from
+        ((select roomname, sum(rate * (checkout - checkin)) as JAN
+        from reservations, rooms 
+        where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'JAN'
+        group by roomname)
+        NATURAL JOIN
+        (select roomname, sum(rate * (checkout - checkin)) as FEB
+        from reservations, rooms 
+        where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'FEB'
+        group by roomname)
+        NATURAL JOIN
+        (select roomname, sum(rate * (checkout - checkin)) as MAR
+        from reservations, rooms 
+        where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'MAR'
+        group by roomname)
+        NATURAL JOIN
+        (select roomname, sum(rate * (checkout - checkin)) as APR
+        from reservations, rooms 
+        where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'APR'
+        group by roomname)
+        NATURAL JOIN
+        (select roomname, sum(rate * (checkout - checkin)) as MAY
+        from reservations, rooms 
+        where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'MAY'
+        group by roomname)
+        NATURAL JOIN
+        (select roomname, sum(rate * (checkout - checkin)) as JUN
+        from reservations, rooms 
+        where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'JUN'
+        group by roomname)
+        NATURAL JOIN
+        (select roomname, sum(rate * (checkout - checkin)) as JUL
+        from reservations, rooms 
+        where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'JUL'
+        group by roomname)
+        NATURAL JOIN
+        (select roomname, sum(rate * (checkout - checkin)) as AUG
+        from reservations, rooms 
+        where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'AUG'
+        group by roomname)
+        NATURAL JOIN
+        (select roomname, sum(rate * (checkout - checkin)) as SEP
+        from reservations, rooms 
+        where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'SEP'
+        group by roomname)
+        NATURAL JOIN
+        (select roomname, sum(rate * (checkout - checkin)) as OCT
+        from reservations, rooms 
+        where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'OCT'
+        group by roomname)
+        NATURAL JOIN
+        (select roomname, sum(rate * (checkout - checkin)) as NOV
+        from reservations, rooms 
+        where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'NOV'
+        group by roomname)
+        NATURAL JOIN
+        (select roomname, sum(rate * (checkout - checkin)) as DEC
+        from reservations, rooms 
+        where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'DEC'
+        group by roomname)
+        NATURAL JOIN 
+        (select roomname, sum(rate * (checkout - checkin)) as Total
+        from reservations, rooms
+        where rooms.roomid = reservations.room
+        group by roomname));";
+    try {
+        String queryToExecute;
+        switch(query) {
+            case "counts":
+                queryToExecute = reservationCountsQuery;
+                break;
+            case "days":
+                queryToExecute = daysCountsQuery;
+                break;
+            default:
+                queryToExecute = revenuesQuery;
+                break;
+
+        }
+        ResultSet results = conn.executeQuery(queryToExecute);
+        Vector<Vector<String>> table = new Vector<Vector<String>>();
+        String[] headers = {"Roomname", "JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL",
+                    "AUG", "SEP", "OCT", "NOV", "DEC", "TOTAL"};
+        Vector<String> columnHeaders = new Vector<String>();
+        columnHeaders.addAll(Arrays.asList(headers));
+
+
+
+        boolean hasNext = results.next();
+        while(hasNext) {
+            Vector<String> row = new Vector<String>();
+            for(int column = 1; column < 14) {
+                row.add(results.getString(column));
+            }
+            table.add(row);
+            hasNext = emptyQueryResults.next();
+        }        
+    } catch (SQLException e) {
+        System.out.println("Reservation counts query failed.");
+    }
+
 }
 
