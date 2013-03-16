@@ -132,7 +132,7 @@ private List<String> findOccupiedRoomsInRange(String startDate, String endDate, 
     return fullyOccupiedRooms;
 }
 
-
+/* Handles OR-2 */
 private void reservationMonthByMonthQuery(String query) {
     String daysCountsQuery = "
         select * 
@@ -370,5 +370,59 @@ private void reservationMonthByMonthQuery(String query) {
         System.out.println("Reservation counts query failed.");
     }
 
+}
+
+
+/* Handles OR-3 */
+private void browseReservationsQuery(String startDate, String endDate, String room) {
+    String queryToExecute;
+    if(room == null) {
+        queryToExecute = "select code, checkin, checkout
+            from reservations
+            where checkin >= to_date('?' ,'DD-MON-YYYY') and 
+            checkin < to_date('?', 'DD-MON-YYYY');";
+    } else {
+        if(startDate == null) {
+            queryToExecute = "select code, checkin, checkout
+                from reservations
+                where room = '?'";
+        }
+        else {
+            queryToExecute = "select code, checkin, checkout
+                from reservations
+                where checkin >= to_date('start' ,'DD-MON-YYYY') and 
+                checkin < to_date('end', 'DD-MON-YYYY') and 
+                room = '?';";
+        }
+    }
+
+    try {
+        PreparedStatement ps = conn.prepareStatement(queryToExecute);
+        if(room == null) {
+            ps.setString(1, startDate);
+            ps.setString(2, endDate);
+        } else if(startDate == null) {
+            ps.setString(1, room);
+        } else {
+            ps.setString(1, startDate);
+            ps.setString(2, endDate);
+            ps.setString(3, room);
+        }
+        ResultSet results = conn.executeQuery(ps);
+        String[] headers = {"Room, CheckIn, CheckOut"};
+        Vector<String> columnHeaders = new Vector<String>().addAll(Arrays.asList(headers));
+
+        Vector<Vector<String>> table = new Vector<Vector<String>>();
+        boolean hasNext = results.next();
+        while(hasNext) {
+            Vector<String> row = new Vector<String>();
+            row.add(results.getString(1));
+            row.add(results.getString(2));
+            row.add(results.getString(3));
+            table.add(row);
+        }
+    } catch (SQLException e) {
+        System.out.println("Reservations query failed.")
+    }
 }
 
