@@ -39,7 +39,7 @@ where checkout <> nextin and
 ); 
 
 
-
+-- 
 select r1.roomid, 'Empty' as Status
 from rooms r1
 where r1.roomid NOT IN (
@@ -55,22 +55,140 @@ where roomid = r1.roomid and ((checkin <= to_date('29-MAR-2010', 'DD-MON-YYYY') 
 
 
 -- OR-2
-select roomname, to_char(checkout, 'MON') 'Month', count(*)
+select * 
+from
+((select roomname, count(*) as JAN
 from reservations, rooms 
-where to_char(checkout, 'YYYY') = '2010'
-group by to_char(checkout, 'MON');
-
-select roomname, to_char(checkout, 'MON') 'Month',
-       sum(checkout - checkin) 'Days Occupied'
+where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'JAN'
+group by roomname)
+NATURAL JOIN
+(select roomname, count(*) as FEB
+from reservations, rooms 
+where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'FEB'
+group by roomname)
+NATURAL JOIN
+(select roomname, count(*) as MAR
+from reservations, rooms 
+where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'MAR'
+group by roomname)
+NATURAL JOIN
+(select roomname, count(*) as APR
+from reservations, rooms 
+where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'APR'
+group by roomname)
+NATURAL JOIN
+(select roomname, count(*) as MAY
+from reservations, rooms 
+where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'MAY'
+group by roomname)
+NATURAL JOIN
+(select roomname, count(*) as JUN
+from reservations, rooms 
+where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'JUN'
+group by roomname)
+NATURAL JOIN
+(select roomname, count(*) as JUL
+from reservations, rooms 
+where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'JUL'
+group by roomname)
+NATURAL JOIN
+(select roomname, count(*) as AUG
+from reservations, rooms 
+where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'AUG'
+group by roomname)
+NATURAL JOIN
+(select roomname, count(*) as SEP
+from reservations, rooms 
+where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'SEP'
+group by roomname)
+NATURAL JOIN
+(select roomname, count(*) as OCT
+from reservations, rooms 
+where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'OCT'
+group by roomname)
+NATURAL JOIN
+(select roomname, count(*) as NOV
+from reservations, rooms 
+where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'NOV'
+group by roomname)
+NATURAL JOIN
+(select roomname, count(*) as DEC
+from reservations, rooms 
+where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'DEC'
+group by roomname)
+NATURAL JOIN 
+(select roomname, count(*) as Total
 from reservations, rooms
-where to_char(checkout, 'YYYY') = '2010'
-group by to_char(checkout, 'MON');
+where rooms.roomid = reservations.room
+group by roomname));
 
-select roomname, to_char(checkout, 'MON') 'Month',
-       sum(checkout - checkin) * rate 'Revenue'
+select * 
+from
+((select roomname, sum(rate * (checkout - checkin)) as JAN
+from reservations, rooms 
+where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'JAN'
+group by roomname)
+NATURAL JOIN
+(select roomname, sum(rate * (checkout - checkin)) as FEB
+from reservations, rooms 
+where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'FEB'
+group by roomname)
+NATURAL JOIN
+(select roomname, sum(rate * (checkout - checkin)) as MAR
+from reservations, rooms 
+where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'MAR'
+group by roomname)
+NATURAL JOIN
+(select roomname, sum(rate * (checkout - checkin)) as APR
+from reservations, rooms 
+where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'APR'
+group by roomname)
+NATURAL JOIN
+(select roomname, sum(rate * (checkout - checkin)) as MAY
+from reservations, rooms 
+where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'MAY'
+group by roomname)
+NATURAL JOIN
+(select roomname, sum(rate * (checkout - checkin)) as JUN
+from reservations, rooms 
+where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'JUN'
+group by roomname)
+NATURAL JOIN
+(select roomname, sum(rate * (checkout - checkin)) as JUL
+from reservations, rooms 
+where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'JUL'
+group by roomname)
+NATURAL JOIN
+(select roomname, sum(rate * (checkout - checkin)) as AUG
+from reservations, rooms 
+where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'AUG'
+group by roomname)
+NATURAL JOIN
+(select roomname, sum(rate * (checkout - checkin)) as SEP
+from reservations, rooms 
+where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'SEP'
+group by roomname)
+NATURAL JOIN
+(select roomname, sum(rate * (checkout - checkin)) as OCT
+from reservations, rooms 
+where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'OCT'
+group by roomname)
+NATURAL JOIN
+(select roomname, sum(rate * (checkout - checkin)) as NOV
+from reservations, rooms 
+where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'NOV'
+group by roomname)
+NATURAL JOIN
+(select roomname, sum(rate * (checkout - checkin)) as DEC
+from reservations, rooms 
+where rooms.roomid = reservations.room and to_char(checkout, 'MON') = 'DEC'
+group by roomname)
+NATURAL JOIN 
+(select roomname, sum(rate * (checkout - checkin)) as Total
 from reservations, rooms
-where to_char(checkout, 'YYYY') = '2010'
-group by to_char(checkout, 'MON');
+where rooms.roomid = reservations.room
+group by roomname));
+
 
 -- OR-3
 
