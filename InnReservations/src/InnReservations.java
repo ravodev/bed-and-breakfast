@@ -980,6 +980,11 @@ public class InnReservations {
 		guestLeftPanel.add(btnGuestRR, "2, 2, fill, top");
 		
 		JButton btnGuestReservations = new JButton("Reservations");
+		btnGuestReservations.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				displayReservations();
+			}
+		});
 		guestLeftPanel.add(btnGuestReservations, "2, 4");
 		
 		JLabel lblDetailsRoomInfo = new JLabel("Detailed room info:");
@@ -1257,6 +1262,85 @@ public class InnReservations {
 		adminTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 		adminTca = new TableColumnAdjuster(adminTable);
 		scrollPane.setViewportView(adminTable);
+	}
+
+	protected void displayReservations() {
+		if (tableExists("Rooms") && tableExists("Reservations")) {
+			Vector<String> tableColumns = new Vector<String>();
+			 Vector<Vector<String>> tableData = new Vector<Vector<String>>();
+			
+			 String start = textFieldGuestOutputPanelHeaderCheckin.getText();
+			 String end = textFieldGuestOutputPanelHeaderCheckOut.getText();
+			 
+			 if (start.length() == 0 || end.length() == 0)
+				 return;
+			 
+			 String query = String.format("SELECT k.roomid, k.roomName, MAX(k.Price) AS Price " +
+						"FROM (SELECT rm.roomid, " +
+						"             rm.roomName, " +
+						"             CASE " +
+						"                WHEN TO_CHAR(d.curdate) = '01-JAN-10' THEN rm.basePrice * 1.25 " +
+						"                WHEN TO_CHAR(d.curdate) = '04-JUL-10' THEN rm.basePrice * 1.25 " +
+						"                WHEN TO_CHAR(d.curdate) = '06-SEP-10' THEN rm.basePrice * 1.25 " +
+						"                WHEN TO_CHAR(d.curdate) = '30-OCT-10' THEN rm.basePrice * 1.25 " +
+						"                WHEN TO_CHAR(d.curdate, 'FMDAY') = 'MONDAY' THEN rm.basePrice " +
+						"                WHEN TO_CHAR(d.curdate, 'FMDAY') = 'TUESDAY' THEN rm.basePrice " +
+						"                WHEN TO_CHAR(d.curdate, 'FMDAY') = 'WEDNESDAY' THEN rm.basePrice " +
+						"                WHEN TO_CHAR(d.curdate, 'FMDAY') = 'THURSDAY' THEN rm.basePrice " +
+						"                WHEN TO_CHAR(d.curdate, 'FMDAY') = 'FRIDAY' THEN rm.basePrice " +
+						"                WHEN TO_CHAR(d.curdate, 'FMDAY') = 'SATURDAY' THEN rm.basePrice * 1.10 " +
+						"                WHEN TO_CHAR(d.curdate, 'FMDAY') = 'SUNDAY' THEN rm.basePrice * 1.10 " +
+						"             END AS Price " +
+						"      FROM (SELECT to_date('%s') + rownum - 1 AS CurDate " +
+						"            FROM reservations  " +
+						"            WHERE rownum < to_date('%s') - to_date('%s') + 1) d, " +
+						"           reservations r,  " +
+						"           rooms rm  " +
+						"      WHERE rm.roomid = r.room and  " +
+						"            d.curdate not in (SELECT d.curdate  " +
+						"                              FROM (SELECT to_date('%s') + rownum - 1 AS CurDate  " +
+						"                                    FROM reservations  " +
+						"                                    WHERE rownum < to_date('%s') - to_date('%s') + 1) d,  " +
+						"                                   reservations r  " +
+						"                              WHERE d.curdate between r.checkin and r.checkout-1 AND r.room = rm.roomid)) k " +
+						"GROUP BY k.roomid, k.roomName " +
+						"HAVING COUNT(k.roomid) = (SELECT COUNT(*) * (TO_DATE('%s') - TO_DATE('%s')) " +
+						"                          FROM Reservations " +
+						"                          WHERE Room = k.roomid)", start, end, start, start, end, start, end, start);
+			
+			Statement s;
+			try {
+				s = conn.createStatement();
+				ResultSet rs = s.executeQuery(query);
+				ResultSetMetaData md = rs.getMetaData();
+		        int columns = md.getColumnCount();
+		        
+		        for (int i = 1; i <= columns; i++)
+		        	tableColumns.addElement(md.getColumnName(i));
+		        
+				while (rs.next()) {
+					Vector<String> row = new Vector<String>(columns);
+
+	                for (int i = 1; i <= columns; i++)
+	                    row.addElement(rs.getString(i));
+
+	                tableData.addElement(row);
+				}
+				s.close();
+			} catch (SQLException e) {
+				System.err.println(e);
+				System.exit(1);
+			}
+			
+			tblGuestOutputPanel.setModel(new DefaultTableModel(
+					tableData,
+					tableColumns
+				));
+			
+			guestOutputPanelTca.adjustColumns();
+		}
+		
+		
 	}
 
 	// Determines whether date range is valid for reservation
