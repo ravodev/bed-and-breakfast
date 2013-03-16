@@ -408,7 +408,7 @@ private void browseReservationsQuery(String startDate, String endDate, String ro
             ps.setString(2, endDate);
             ps.setString(3, room);
         }
-        ResultSet results = conn.executeQuery(ps);
+        ResultSet results = conn.executeQuery();
         String[] headers = {"Room, CheckIn, CheckOut"};
         Vector<String> columnHeaders = new Vector<String>().addAll(Arrays.asList(headers));
 
@@ -423,6 +423,54 @@ private void browseReservationsQuery(String startDate, String endDate, String ro
         }
     } catch (SQLException e) {
         System.out.println("Reservations query failed.")
+    }
+}
+
+private int totalNightsOccupied(String room) {
+    String queryToExecute = "select sum(checkout - checkin)
+        from reservations
+        where to_char(checkout, 'YYYY') = '2010' and
+        room = '?';";
+
+    try {
+        PreparedStatement ps = conn.prepareStatement(queryToExecute);
+        ps.setString(1, room);
+        ResultSet results = conn.executeQuery();
+        results.next();
+        return results.getInt(1);
+    } catch(SQLException e) {
+        System.out.println("Nights occupied query failed");
+        return -1;
+    }
+}
+
+private float getTotalRevenueForRoom(String room) {
+    String queryToExecute = "select sum((checkout - checkin) * rate)
+        from reservations
+        where to_char(checkout, 'YYYY') = '2010' and
+        roomid = '?';";
+    try {
+        PreparedStatement ps = conn.prepareStatement(queryToExecute);
+        ps.setString(1, room);
+        ResultSet results = conn.executeQuery();
+        results.next();
+        return results.getFloat(1);
+    } catch(SQLException e) {
+        System.out.println("Total Revenue query failed");
+        return -1.0;
+    }
+}
+
+private float getTotalRevenueAllRooms() {
+    String queryToExecute = "select sum((checkout - checkin) * rate)
+        from reservations
+        where to_char(checkout, 'YYYY') = '2010';";
+    try {
+        conn.executeQuery(queryToExecute);
+        results.next();
+        return results.getFloat(1);
+    } catch (SQLException e) {
+        return -1.0;
     }
 }
 
