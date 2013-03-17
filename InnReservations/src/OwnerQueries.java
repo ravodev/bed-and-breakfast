@@ -15,6 +15,53 @@ private Vector<Vector<String>> viewOccupancy(String startDate, String endDate) {
 
 }
 
+private oneDateOccupancyQuery(String inputDate) {
+    Vector<Vector<String>> table = new Vector<Vector<String>>();
+    String queryToExecute = "select distinct roomname, r1.roomid,
+        case when exists (select * from reservations) then 'Occupied' else 'Empty' end Occupied
+        from rooms r1, reservations re1
+        where r1.roomid = re1.roomid and
+        EXISTS
+            (select * from rooms r, reservations re
+             where
+              r.roomid = re.roomid and
+              r1.roomid = r.roomid and
+              checkin <= to_date('?', 'DD-MON-YYYY') and
+              checkout > to_date('?', 'DD-MON-YYYY'))
+        UNION
+        select distinct roomname, r1.roomid,
+        case when not exists (select * from reservations) then 'Occupied' else 'Empty' end Occupied
+        from rooms r1, reservations re1
+        where r1.roomid = re1.roomid and
+        NOT EXISTS
+            (select * from rooms r, reservations re
+             where
+              r.roomid = re.roomid and
+              r1.roomid = r.roomid and
+              checkin <= to_date('?', 'DD-MON-YYYY') and
+              checkout > to_date('?', 'DD-MON-YYYY'))
+        ;";
+
+    try {
+        PreparedStatement ps = conn.prepareStatement(queryToExecute);
+        ps.setString(1, inputDate);
+        ps.setString(2, inputDate);
+        ps.setString(3, inputDate);
+        ps.setString(4, inputDate);
+        ResultSet results = conn.executeQuery();
+
+        boolean hasNext = results.next();
+        while(hasNext) {
+            Vector<String> row = new Vector<String>();
+            row.addElement(results.getString(1));
+            row.addElement(results.getString(2));
+            table.add(row);
+            hasNext = results.next();
+        }
+
+    }
+}
+
 /* Handles OR-1 case where range of dates is given. */
 private Vector<Vector<String>> twoDateOccupancyQuery(String startDate, String endDate){
     List<String> emptyRooms = findEmptyRoomsInRange(startDate, endDate);
@@ -361,9 +408,9 @@ private void reservationMonthByMonthQuery(String query) {
         while(hasNext) {
             Vector<String> row = new Vector<String>();
             for(int column = 1; column < 14) {
-                row.add(results.getString(column));
+                row.addElement(results.getString(column));
             }
-            table.add(row);
+            table.addElement(row);
             hasNext = emptyQueryResults.next();
         }        
     } catch (SQLException e) {
@@ -416,10 +463,11 @@ private void browseReservationsQuery(String startDate, String endDate, String ro
         boolean hasNext = results.next();
         while(hasNext) {
             Vector<String> row = new Vector<String>();
-            row.add(results.getString(1));
-            row.add(results.getString(2));
-            row.add(results.getString(3));
+            row.addElement(results.getString(1));
+            row.addElement(results.getString(2));
+            row.addElement(results.getString(3));
             table.add(row);
+            hasNext = results.next();
         }
     } catch (SQLException e) {
         System.out.println("Reservations query failed.")
