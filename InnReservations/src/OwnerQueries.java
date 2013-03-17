@@ -1,21 +1,21 @@
 /* Used to achieve OR-1 Requirement */
-private Vector<Vector<String>> viewOccupancy(String startDate, String endDate) {
+private void viewOccupancy(String startDate, String endDate) {
     if(!startDate.contains("10") and !startDate.contains("11")) {
         startDate += "-10";
     }
     if(endDate == null) {
-        return oneDateOccupancyQuery(startDate);
+        oneDateOccupancyQuery(startDate);
     }
     else {
         if(!endDate.contains("10") !endDate.contains("11")) {
             endDate += "-10";
         }
-        return twoDateOccupancyQuery(startDate, endDate);
+        twoDateOccupancyQuery(startDate, endDate);
     }
 
 }
 
-private oneDateOccupancyQuery(String inputDate) {
+private void oneDateOccupancyQuery(String inputDate) {
     Vector<Vector<String>> table = new Vector<Vector<String>>();
     String queryToExecute = "select distinct roomname, r1.roomid,
         case when exists (select * from reservations) then 'Occupied' else 'Empty' end Occupied
@@ -63,7 +63,7 @@ private oneDateOccupancyQuery(String inputDate) {
 }
 
 /* Handles OR-1 case where range of dates is given. */
-private Vector<Vector<String>> twoDateOccupancyQuery(String startDate, String endDate){
+private void twoDateOccupancyQuery(String startDate, String endDate){
     List<String> emptyRooms = findEmptyRoomsInRange(startDate, endDate);
     List<String> fullyOccupiedRooms = findOccupiedRoomsInRange(startDate, endDate, emptyRooms);
     List<String> partiallyOccupiedRooms = 
@@ -92,7 +92,7 @@ private Vector<Vector<String>> twoDateOccupancyQuery(String startDate, String en
         row.addElement("Partially Occupied");
         occupancyData.addElement(row);
     }
-    return occupancyData;
+    return;
 }
 
 /* Finds and returns the list of rooms that are completely empty. */
