@@ -1,14 +1,14 @@
 /* Used to achieve OR-1 Requirement */
 private Vector<Vector<String>> viewOccupancy(String startDate, String endDate) {
-    if(!startDate.contains("2010") and !startDate.contains('2011')) {
-        startDate += "-2010";
+    if(!startDate.contains("10") and !startDate.contains("11")) {
+        startDate += "-10";
     }
     if(endDate == null) {
         return oneDateOccupancyQuery(startDate);
     }
     else {
-        if(!endDate.contains("2010")) {
-            endDate += "-2010";
+        if(!endDate.contains("10") !endDate.contains("11")) {
+            endDate += "-10";
         }
         return twoDateOccupancyQuery(startDate, endDate);
     }
@@ -26,8 +26,8 @@ private oneDateOccupancyQuery(String inputDate) {
              where
               r.roomid = re.roomid and
               r1.roomid = r.roomid and
-              checkin <= to_date('?', 'DD-MON-YYYY') and
-              checkout > to_date('?', 'DD-MON-YYYY'))
+              checkin <= to_date('?', 'DD-MON-YY') and
+              checkout > to_date('?', 'DD-MON-YY'))
         UNION
         select distinct roomname, r1.roomid,
         case when not exists (select * from reservations) then 'Occupied' else 'Empty' end Occupied
@@ -38,8 +38,8 @@ private oneDateOccupancyQuery(String inputDate) {
              where
               r.roomid = re.roomid and
               r1.roomid = r.roomid and
-              checkin <= to_date('?', 'DD-MON-YYYY') and
-              checkout > to_date('?', 'DD-MON-YYYY'))
+              checkin <= to_date('?', 'DD-MON-YY') and
+              checkout > to_date('?', 'DD-MON-YY'))
         ;";
 
     try {
@@ -104,12 +104,12 @@ private List<String> findEmptyRoomsInRange(String startDate, String endDate) {
                             "where r1.roomid NOT IN (" +
                             "select roomid" +
                             "from reservations" + 
-                            "where roomid = r1.roomid and ((checkin <= to_date('?', 'DD-MON-YYYY') and" +
-                            "checkout > to_date('?', 'DD-MON-YYYY')) or " +
-                            "(checkin >= to_date('?', 'DD-MON-YYYY') and " +
-                            "checkin < to_date('?', 'DD-MON-YYYY')) or " +
-                            "(checkout < to_date('?', 'DD-MON-YYYY') and " +
-                            "checkout > to_date('?', 'DD-MON-YYYY'))));";
+                            "where roomid = r1.roomid and ((checkin <= to_date('?', 'DD-MON-YY') and" +
+                            "checkout > to_date('?', 'DD-MON-YY')) or " +
+                            "(checkin >= to_date('?', 'DD-MON-YY') and " +
+                            "checkin < to_date('?', 'DD-MON-YY')) or " +
+                            "(checkout < to_date('?', 'DD-MON-YY') and " +
+                            "checkout > to_date('?', 'DD-MON-YY'))));";
 
     try {
         PreparedStatement erq = conn.prepareStatement(emptyRoomsQuery);
@@ -155,8 +155,8 @@ private List<String> findOccupiedRoomsInRange(String startDate, String endDate, 
                                 "from reservations " + 
                                 "where roomid = '?') " +
                                 "where checkout <> nextin and " +
-                                "checkout >= to_date('?', 'DD-MON-YYYY') and " +
-                                "nextin <= to_date('?', 'DD-MON-YYYY')); ";
+                                "checkout >= to_date('?', 'DD-MON-YY') and " +
+                                "nextin <= to_date('?', 'DD-MON-YY')); ";
     try {
         PreparedStatement oq = conn.prepareStatement(occupiedRoomsQuery);
         /* Check if each room is completely occupied. */
@@ -426,8 +426,8 @@ private void browseReservationsQuery(String startDate, String endDate, String ro
     if(room == null) {
         queryToExecute = "select code, checkin, checkout
             from reservations
-            where checkin >= to_date('?' ,'DD-MON-YYYY') and 
-            checkin < to_date('?', 'DD-MON-YYYY');";
+            where checkin >= to_date('?' ,'DD-MON-YY') and 
+            checkin < to_date('?', 'DD-MON-YY');";
     } else {
         if(startDate == null) {
             queryToExecute = "select code, checkin, checkout
@@ -437,8 +437,8 @@ private void browseReservationsQuery(String startDate, String endDate, String ro
         else {
             queryToExecute = "select code, checkin, checkout
                 from reservations
-                where checkin >= to_date('start' ,'DD-MON-YYYY') and 
-                checkin < to_date('end', 'DD-MON-YYYY') and 
+                where checkin >= to_date('start' ,'DD-MON-YY') and 
+                checkin < to_date('end', 'DD-MON-YY') and 
                 room = '?';";
         }
     }
@@ -477,7 +477,7 @@ private void browseReservationsQuery(String startDate, String endDate, String ro
 private int totalNightsOccupied(String room) {
     String queryToExecute = "select sum(checkout - checkin)
         from reservations
-        where to_char(checkout, 'YYYY') = '2010' and
+        where to_char(checkout, 'YY') = '2010' and
         room = '?';";
 
     try {
@@ -495,7 +495,7 @@ private int totalNightsOccupied(String room) {
 private float getTotalRevenueForRoom(String room) {
     String queryToExecute = "select sum((checkout - checkin) * rate)
         from reservations
-        where to_char(checkout, 'YYYY') = '2010' and
+        where to_char(checkout, 'YY') = '2010' and
         roomid = '?';";
     try {
         PreparedStatement ps = conn.prepareStatement(queryToExecute);
@@ -512,7 +512,7 @@ private float getTotalRevenueForRoom(String room) {
 private float getTotalRevenueAllRooms() {
     String queryToExecute = "select sum((checkout - checkin) * rate)
         from reservations
-        where to_char(checkout, 'YYYY') = '2010';";
+        where to_char(checkout, 'YY') = '2010';";
     try {
         conn.executeQuery(queryToExecute);
         results.next();
