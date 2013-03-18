@@ -1,0 +1,15 @@
+Authors: Luke Larson,
+         Andrew Sinclair,
+         Alexander Spotnitz 
+
+Name: Bed & Breakfast Inn Reservation System
+Description: A database enabled Java application designed to 
+             manage a small bed and breakfast inn.
+Date: 3/18/2013
+Assignment: Lab 9
+Professor: Dr. Alexander Dekhtyar
+Class: cpe365
+
+Instructions:
+    Run 'make test'
+
