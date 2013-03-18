@@ -11,5 +11,10 @@ Professor: Dr. Alexander Dekhtyar
 Class: cpe365
 
 Instructions:
-    Run 'make test'
+	1. Ensure jdk 7 is installed--it will only run on javac/java 7.
+	2. Configure Makefile to point to version 7 of java and javac.
+    3. Run 'make test'
+
+Notes:
+	1. Makefile was designed and tested to run on Linux. 
 

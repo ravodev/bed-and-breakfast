@@ -1366,7 +1366,7 @@ public class InnReservations {
 	private void initialize() {
 		frmBedBreakfast = new JFrame();
 		frmBedBreakfast.setTitle("Bed & Breakfast Inn Reservation System");
-		frmBedBreakfast.setBounds(100, 100, 600, 445);
+		frmBedBreakfast.setBounds(100, 100, 700, 600);
 		frmBedBreakfast.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		
 		JTabbedPane tabbedPane = new JTabbedPane(JTabbedPane.TOP);
