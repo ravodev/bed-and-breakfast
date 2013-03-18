@@ -12,25 +12,16 @@ import com.jgoodies.forms.layout.ColumnSpec;
 import com.jgoodies.forms.factories.FormFactory;
 import com.jgoodies.forms.layout.RowSpec;
 import javax.swing.JButton;
-import javax.swing.BoxLayout;
 import javax.swing.JDialog;
 import javax.swing.JOptionPane;
 import javax.swing.JTable;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableModel;
 import javax.swing.JScrollPane;
-import javax.swing.ListSelectionModel;
-import java.awt.Dimension;
-import java.awt.GridLayout;
-import javax.swing.JScrollBar;
-import javax.swing.border.TitledBorder;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
-import javax.swing.event.TableModelListener;
 
 import java.awt.FlowLayout;
 import java.io.BufferedReader;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.sql.Connection;
@@ -66,11 +57,11 @@ public class InnReservations {
 	private JTable adminTable;
 	private TableColumnAdjuster adminTca;
 	private JLabel lblAdminStatus = null;
-	private JLabel lblAdminReservations = null;
+	public JLabel lblAdminReservations = null;
 	private JLabel lblAdminRooms = null;
 	private JLabel lblAdminDiagnostics = null;
 	private JButton btnAdminLoadDB = null;
-	private static int adminReservationCount;
+	static int adminReservationCount;
 	private static int adminRoomCount;
 	private static Vector<String> adminColumns;
 	private static Vector<Vector<String>> adminData;
@@ -110,7 +101,6 @@ public class InnReservations {
 			String query = "SELECT * " +
 		                   "FROM Reservations " +
 					       "WHERE Code = " + tableOwnerReservations.getValueAt(i, 0);
-			System.out.println(query);
 			
 			Vector<String> tableColumns = new Vector<String>();
 			Vector<Vector<String>> tableData = new Vector<Vector<String>>();
@@ -136,9 +126,7 @@ public class InnReservations {
 				}
 				
 			} catch (SQLException e) {
-				System.err.println(e);
-				e.printStackTrace();
-				System.exit(1);
+				return;
 			}
 			
 			tableOwnerDetailed.setModel(new DefaultTableModel(
@@ -195,9 +183,7 @@ public class InnReservations {
 						}
 
 					} catch (SQLException e) {
-						System.err.println(e);
-						e.printStackTrace();
-						System.exit(1);
+						return;
 					}
 
 					tableOwnerDetailed.setModel(new DefaultTableModel(
@@ -252,9 +238,7 @@ public class InnReservations {
 						}
 
 					} catch (SQLException e) {
-						System.err.println(e);
-						e.printStackTrace();
-						System.exit(1);
+						return;
 					}
 
 					tableOwnerReservations.setModel(new DefaultTableModel(
@@ -294,9 +278,7 @@ public class InnReservations {
 					}
 
 				} catch (SQLException e) {
-					System.err.println(e);
-					e.printStackTrace();
-					System.exit(1);
+					return;
 				}
 
 				tableOwnerDetailed.setModel(new DefaultTableModel(
@@ -356,8 +338,7 @@ public class InnReservations {
 					row.addElement(getPercentRevenue((String) tableOwnerRight.getValueAt(i, 0)));
 					tableData.addElement(row);
 				} catch (SQLException e) {
-					System.err.println(e);
-					System.exit(1);
+					return;
 				}
 				
 				tableOwnerDetailed.setModel(new DefaultTableModel(
@@ -399,9 +380,7 @@ public class InnReservations {
 					}
 
 				} catch (SQLException e) {
-					System.err.println(e);
-					e.printStackTrace();
-					System.exit(1);
+					return;
 				}
 
 				tableOwnerReservations.setModel(new DefaultTableModel(
@@ -420,6 +399,8 @@ public class InnReservations {
 				return;
 			}
 			int i = tblGuestOutputPanel.getSelectionModel().getLeadSelectionIndex();
+			if (i < 0)
+				return;
 			
 			if (!tableExists("Rooms"))
 				return;
@@ -452,8 +433,7 @@ public class InnReservations {
 				}
 				
 			} catch (SQLException e) {
-				System.err.println(e);
-				System.exit(1);
+				return;
 			}
 			
 			tblGuestDetailedRoomInfo.setModel(new DefaultTableModel(
@@ -1139,16 +1119,7 @@ public class InnReservations {
         // Get number of entries in each table
         adminRoomCount = getRoomCount();
         adminReservationCount = getReservationCount();
-        
-        // Close database connection
-//        try {
-//            conn.close();
-//        }
-//        catch (Exception ex) {
-//            System.out.println("Unable to close connection");
-//        }
-//        System.out.println("Closed connection");
-//		
+     
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
 				try {
@@ -1320,7 +1291,7 @@ public class InnReservations {
 			s.executeUpdate(query);
 		} catch (SQLException e) {
 			System.err.println("Unable to create Reservations table.");
-			System.exit(1);
+			return;
 		}	
 	}
 
@@ -1341,7 +1312,7 @@ public class InnReservations {
 			s.executeUpdate(query);
 		} catch (SQLException e) {
 			System.err.println("Unable to create Rooms table.");
-			System.exit(1);
+			return;
 		};
 	}
 
@@ -1359,9 +1330,7 @@ public class InnReservations {
 			}
 		}
 		catch (SQLException e) {
-			e.printStackTrace();
-			System.out.println(e);
-			System.exit(1);
+			return false;
 		}
 		
 		return false;
@@ -1482,9 +1451,10 @@ public class InnReservations {
 			public void actionPerformed(ActionEvent e) {
 				String start = textFieldGuestOutputPanelHeaderCheckin.getText();
 				String end = textFieldGuestOutputPanelHeaderCheckOut.getText();
-				String rm = (String) tblGuestOutputPanel.getValueAt(
-						tblGuestOutputPanel.getSelectionModel().getLeadSelectionIndex(),
-						0);
+				int j = tblGuestOutputPanel.getSelectionModel().getLeadSelectionIndex();
+				if (j < 0)
+					return;
+				String rm = (String) tblGuestOutputPanel.getValueAt(j, 0);
 				String query = String.format("( " +
 						"SELECT TO_CHAR(d.curdate, 'DD-MON-YY') AS Day, 'Not occupied' AS Status, " +
 						"      CASE " +
@@ -1548,8 +1518,7 @@ public class InnReservations {
 					}
 					
 				} catch (SQLException e1) {
-					System.err.println(e1);
-					System.exit(1);
+					return;
 				}
 				
 				
@@ -1866,8 +1835,7 @@ public class InnReservations {
 			}
 			s.close();
 		} catch (SQLException e) {
-			System.err.println(e);
-			System.exit(1);
+			return;
 		}
 		
 		tableOwnerRight.setModel(new DefaultTableModel(
@@ -1954,8 +1922,7 @@ public class InnReservations {
 				}
 				s.close();
 			} catch (SQLException e) {
-				System.err.println(e);
-				System.exit(1);
+				return;
 			}
 			
 			tblGuestOutputPanel.setModel(new DefaultTableModel(
@@ -1973,8 +1940,11 @@ public class InnReservations {
 	protected boolean reservationIsValid() {
 		String start = textFieldGuestOutputPanelHeaderCheckin.getText();
 		String end = textFieldGuestOutputPanelHeaderCheckOut.getText();
+		int j = tblGuestOutputPanel.getSelectionModel().getLeadSelectionIndex();
+		if (j < 0)
+			return false;
 		String rm = (String) tblGuestOutputPanel.getValueAt(
-				tblGuestOutputPanel.getSelectionModel().getLeadSelectionIndex(),
+				j,
 				0);
 		String query = String.format(
 				"SELECT 'Occupied' " +
@@ -1993,27 +1963,10 @@ public class InnReservations {
 			}
 		}
 		catch (SQLException e) {
-			e.printStackTrace();
-			System.out.println(e);
-			System.exit(1);
+			return false;
 		}
 	
 		return true;
-	}
-
-	protected String guestGetAvailability() {
-		StringBuilder sb = new StringBuilder();
-		int i = tblGuestOutputPanel.getSelectionModel().getLeadSelectionIndex();
-		
-//		SELECT d.curdate, 'Occupied', r.checkin, r.checkout
-//		FROM (SELECT to_date('02-JAN-10') + rownum - 1 AS CurDate
-//		      FROM reservations
-//		      WHERE rownum <= to_date('01-MAY-10') - to_date('02-JAN-10') + 1) d,
-//		     reservations r
-//		WHERE r.room = 'TAA' and
-//		      d.curdate between r.checkin and r.checkout-1;
-		
-		return "Test";
 	}
 
 	protected void displayRoomAndRates() {
@@ -2045,8 +1998,7 @@ public class InnReservations {
 				}
 				s.close();
 			} catch (SQLException e) {
-				System.err.println(e);
-				System.exit(1);
+				return;
 			}
 			
 			tblGuestOutputPanel.setModel(new DefaultTableModel(
@@ -2077,8 +2029,7 @@ public class InnReservations {
 			}
 		}
 		catch (SQLException e) {
-			System.err.println(e);
-			System.exit(1);
+			return;
 		}
 		
 		lblAdminReservations.setText("Reservations: 0");
@@ -2105,8 +2056,7 @@ public class InnReservations {
 			}
 		}
 		catch (SQLException e) {
-			System.err.println(e);
-			System.exit(1);
+			return;
 		}
 		
 		adminRoomCount = getRoomCount();
@@ -2133,8 +2083,7 @@ public class InnReservations {
 				}
 				s.close();
 			} catch (SQLException e1) {
-				System.err.println(e1);
-				System.exit(1);
+				return;
 			}
 			adminRoomCount = getRoomCount();
 			adminReservationCount = getReservationCount();
@@ -2180,7 +2129,7 @@ public class InnReservations {
 			
 		} catch (SQLException e) {
 			System.err.println("Unable to get rooms.");
-			System.exit(1);
+			return;
 		}
 		
 		adminTable.setModel(new DefaultTableModel(
@@ -2225,7 +2174,7 @@ public class InnReservations {
 			
 		} catch (SQLException e) {
 			System.err.println("Unable to get reservations.");
-			System.exit(1);
+			return;
 		}
 		
 		adminTable.setModel(new DefaultTableModel(
@@ -2308,7 +2257,7 @@ public class InnReservations {
 			
 	    }
 	    catch (SQLException e) {
-	    	e.printStackTrace();
+	    	return;
 	    }
 	    
 	    tableOwnerRight.setModel(new DefaultTableModel(
@@ -2326,7 +2275,7 @@ public class InnReservations {
 	    List<String> partiallyOccupiedRooms = generateListOfAllRoomIDS();
 	    partiallyOccupiedRooms.removeAll(emptyRooms);
 	    partiallyOccupiedRooms.removeAll(fullyOccupiedRooms);
-
+	    
 	    Vector<String> occupancyColumns = new Vector<String>();
 	    Vector<Vector<String>> occupancyData = new Vector<Vector<String>>();
 	    occupancyColumns.addElement("RoomId");
@@ -2368,9 +2317,9 @@ public class InnReservations {
 	    String emptyRoomsQuery = "select r1.roomid " +
 	                            "from rooms r1 " +
 	                            "where r1.roomid NOT IN (" +
-	                            "select roomid " +
+	                            "select room " +
 	                            "from reservations " + 
-	                            "where roomid = r1.roomid and ((checkin <= to_date(?, 'DD-MON-YY') and " +
+	                            "where room = r1.roomid and ((checkin <= to_date(?, 'DD-MON-YY') and " +
 	                            "checkout > to_date(?, 'DD-MON-YY')) or " +
 	                            "(checkin >= to_date(?, 'DD-MON-YY') and " +
 	                            "checkin < to_date(?, 'DD-MON-YY')) or " +
@@ -2389,11 +2338,9 @@ public class InnReservations {
 	        List<String> emptyRooms = getEmptyRoomsFromResultSet(emptyRoomsQueryResult);
 	        return emptyRooms;
 	    } catch (SQLException e) {
-	    	System.out.println(e);
 	        System.out.println("Empty rooms query failed.");
-	        System.exit(1);
+	        return new ArrayList<String>();
 	    }
-	    return null;
 	}
 
 	/* Returns a list of strings. This list contains the RoomIds of all completely empty rooms. */
@@ -2403,12 +2350,12 @@ public class InnReservations {
 		try {
 			hasNext = emptyQueryResults.next();
 			while (hasNext) {
-		        String room = emptyQueryResults.getString("r1.roomid");
+		        String room = emptyQueryResults.getString(1);
 		        rooms.add(room);
 		        hasNext = emptyQueryResults.next();
 		    }
 		} catch (SQLException e) {
-			e.printStackTrace();
+			return rooms;
 		}
 	     
 	    return rooms;
@@ -2420,39 +2367,36 @@ public class InnReservations {
 	}
 
 	private List<String> findOccupiedRoomsInRange(String startDate, String endDate, List<String> emptyRooms) {
-	    ArrayList<String> nonEmptyRooms = generateListOfAllRoomIDS();
-	    System.out.println(nonEmptyRooms);
-	    nonEmptyRooms.removeAll(emptyRooms);
 	    ArrayList<String> fullyOccupiedRooms = new ArrayList<String>();
-	    String occupiedRoomsQuery = "select count(*) " +
-	                                "from ( " +
-	                                "select checkout, nextin " +
-	                                "from (select room, checkout, lead(checkin) over (order by checkin) nextin " +
-	                                "from reservations " + 
-	                                "where room = ?) " +
-	                                "where checkout <> nextin and " +
-	                                "checkout >= to_date(?, 'DD-MON-YY') and " +
-	                                "nextin <= to_date(?, 'DD-MON-YY')) ";
+	    String occupiedRoomsQuery = "SELECT room " +
+	    		"FROM   reservations  " +
+	    		"    WHERE ( checkin <= To_date(?, 'DD-MON-YY') AND checkout > To_date(?, 'DD-MON-YY')) OR " +
+	    		"         ( checkin >= To_date(?, 'DD-MON-YY') AND checkin < To_date(?, 'DD-MON-YY')) OR " +
+	    		"         ( checkout < To_date(?, 'DD-MON-YY') AND checkout > To_date(?, 'DD-MON-YY')) " +
+	    		"GROUP BY room " +
+	    		"HAVING SUM((CASE WHEN CheckOut > TO_DATE(?) THEN TO_DATE(?) " +
+	    		"                       ELSE CheckOut END) - (CASE WHEN CheckIn < TO_DATE(?) THEN TO_DATE(?) " +
+	    		"                                                  ELSE CheckIn END)) = TO_DATE(?) - TO_DATE(?)";
 	    try {
 	        PreparedStatement oq = conn.prepareStatement(occupiedRoomsQuery);
-	        /* Check if each room is completely occupied. */
-	        for(String room: nonEmptyRooms) {
-	            oq.setString(1, room);
-	            oq.setString(2, startDate);
-	            oq.setString(3, endDate);
-	            ResultSet result = oq.executeQuery();
-	            result.next();
-	            /* If the count is 0, the room is fully occupied. Else it is partially occupied. */
-	            if(0 == result.getInt(1)) {
-	                fullyOccupiedRooms.add(room);
-	            }
-	            oq.clearParameters();
-	        }
+            oq.setString(1, startDate);
+            oq.setString(3, startDate);
+            oq.setString(6, startDate);
+            oq.setString(9, startDate);
+            oq.setString(10, startDate);
+            oq.setString(12, startDate);
+            oq.setString(2, endDate);
+            oq.setString(4, endDate);
+            oq.setString(5, endDate);
+            oq.setString(7, endDate);
+            oq.setString(8, endDate);
+            oq.setString(11, endDate);
+            ResultSet result = oq.executeQuery();
+            while (result.next())
+            	fullyOccupiedRooms.add(result.getString(1));
 	    } catch (SQLException e) {
-	    	System.out.println(e);
 	        System.out.println("Occupied Query Failed.");
-	        e.printStackTrace();
-	        System.exit(1);
+	        return fullyOccupiedRooms;
 	    }
 	    return fullyOccupiedRooms;
 	}
@@ -2708,6 +2652,7 @@ public class InnReservations {
 	        table.addElement(totals);
 	    } catch (SQLException e) {
 	        System.out.println("Reservation counts query failed.");
+	        return;
 	    }
 	    
 	    tableOwnerRight.setModel(new DefaultTableModel(
@@ -2781,9 +2726,8 @@ public class InnReservations {
 	            hasNext = results.next();
 	        }
 	    } catch (SQLException e) {
-	    	System.err.println(e);
-	    	e.printStackTrace();
 	        System.out.println("Reservations query failed.");
+	        return;
 	    }
 	    
 	    tableOwnerRight.setModel(new DefaultTableModel(
@@ -2792,54 +2736,5 @@ public class InnReservations {
 			));
 		
 		tableOwnerRightTca.adjustColumns();
-	}
-
-	private int totalNightsOccupied(String room) {
-	    String queryToExecute = "select sum(checkout - checkin) " +
-	        "from reservations " +
-	        "where to_char(checkout, 'YY') = '2010' and " +
-	        "room = '?'";
-
-	    try {
-	        PreparedStatement ps = conn.prepareStatement(queryToExecute);
-	        ps.setString(1, room);
-	        ResultSet results = ps.executeQuery();
-	        results.next();
-	        return results.getInt(1);
-	    } catch(SQLException e) {
-	        System.out.println("Nights occupied query failed");
-	        return -1;
-	    }
-	}
-
-	private float getTotalRevenueForRoom(String room) {
-	    String queryToExecute = "select sum((checkout - checkin) * rate) " +
-	        "from reservations " +
-	        "where to_char(checkout, 'YY') = '2010' and " +
-	        "roomid = '?'";
-	    try {
-	        PreparedStatement ps = conn.prepareStatement(queryToExecute);
-	        ps.setString(1, room);
-	        ResultSet results = ps.executeQuery();
-	        results.next();
-	        return results.getFloat(1);
-	    } catch(SQLException e) {
-	        System.out.println("Total Revenue query failed");
-	        return (float) -1.0;
-	    }
-	}
-
-	private float getTotalRevenueAllRooms() {
-	    String queryToExecute = "select sum((checkout - checkin) * rate) " +
-	        "from reservations " +
-	        "where to_char(checkout, 'YY') = '2010'";
-	    try {
-	    	Statement s = conn.createStatement();
-	        ResultSet rs = s.executeQuery(queryToExecute);
-	        rs.next();
-	        return rs.getFloat(1);
-	    } catch (SQLException e) {
-	        return (float) -1.0;
-	    }
 	}
 }

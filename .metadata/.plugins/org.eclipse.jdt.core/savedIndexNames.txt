@@ -10,7 +10,6 @@ INDEX VERSION 1.126+C:\cygwin\home\user\w13\cpe365\lab9\bed-and-breakfast\.metad
 3911329804.index
 1842651925.index
 2242401919.index
-4021522178.index
 3502358661.index
 644208093.index
 1657330681.index

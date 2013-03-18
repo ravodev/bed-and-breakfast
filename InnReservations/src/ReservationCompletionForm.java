@@ -10,8 +10,6 @@ import com.jgoodies.forms.layout.ColumnSpec;
 import com.jgoodies.forms.layout.RowSpec;
 import com.jgoodies.forms.factories.FormFactory;
 
-import javax.swing.ButtonModel;
-import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JTextField;
@@ -26,6 +24,7 @@ import java.sql.Statement;
 import java.util.regex.PatternSyntaxException;
 
 
+@SuppressWarnings("serial")
 public class ReservationCompletionForm extends JDialog {
 
 	private final JPanel contentPanel = new JPanel();
@@ -217,6 +216,7 @@ public class ReservationCompletionForm extends JDialog {
 		}
 	}
 
+	@SuppressWarnings("static-access")
 	protected void placeReservation(String first, String last, int numAdults, int numKids,
 			                        String rm, String ci, String co, double discount) {
 		int reservationCode = generateReservationCode();
@@ -236,9 +236,10 @@ public class ReservationCompletionForm extends JDialog {
 			ps.setInt(8, numAdults);
 			ps.setInt(9, numKids);
 			ps.executeUpdate();
+			parent.lblAdminReservations.setText("Reservations: " + (++parent.adminReservationCount));
 		} catch (SQLException e) {
-			System.err.println(e);
-			e.printStackTrace();
+			JOptionPane.showMessageDialog(null, "Reservation failed!");
+			closeWindow();
 		}
 		
 		
@@ -281,17 +282,17 @@ public class ReservationCompletionForm extends JDialog {
 				"                              d.curdate between r.checkin and r.checkout-1) ", start, end, start, rm, start, end, start, rm);
 		
 		try {
+			@SuppressWarnings("static-access")
 			Statement s = parent.conn.createStatement();
 			ResultSet rs = s.executeQuery(query);
 			if (!rs.next()) throw new SQLException();
 			return rs.getFloat(1);
 		} catch (SQLException e) {
-			e.printStackTrace();
+			return 0;
 		}
-		
-		return 0;
 	}
 
+	@SuppressWarnings("static-access")
 	private int generateReservationCode() {
 		String q = "SELECT x.num " +
 		           "FROM (SELECT TRUNC(dbms_random.value(100000, 999999)) num " + 
@@ -306,10 +307,8 @@ public class ReservationCompletionForm extends JDialog {
 			if (!rs.next()) throw new SQLException();
 			return rs.getInt(1);
 		} catch (SQLException e) {
-			e.printStackTrace();
+			return 0;
 		}
-		
-		return 0;
 	}
 
 	protected int getMaxOccupancy() {
@@ -320,6 +319,7 @@ public class ReservationCompletionForm extends JDialog {
 		String q = "SELECT maxOccupancy FROM Rooms WHERE RoomId = ?";
 		
 		try {
+			@SuppressWarnings("static-access")
 			PreparedStatement ps = parent.conn.prepareStatement(q);
 			ps.setString(1, rm);
 			ResultSet rs = ps.executeQuery();
@@ -328,10 +328,8 @@ public class ReservationCompletionForm extends JDialog {
 			else
 				throw new SQLException();
 		} catch (SQLException e) {
-			e.printStackTrace();
+			return 0;
 		}
-		
-		return 0;
 	}
 
 	protected void closeWindow() {
