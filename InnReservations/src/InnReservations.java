@@ -48,9 +48,15 @@ import java.util.Vector;
 import javax.swing.JTextField;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
-
+import javax.swing.SwingConstants;
 
 public class InnReservations {
+	public enum OwnerMode {
+	    OCCUPANCY, RESERVATIONS, ROOMS
+	}
+	
+	public OwnerMode ownerMode;
+	
 	public JFrame frmBedBreakfast;
 	public static Connection conn = null;
 	public InnReservations window;
@@ -77,9 +83,9 @@ public class InnReservations {
 	public JTextField textFieldGuestOutputPanelHeaderCheckin;
 	public JTextField textFieldGuestOutputPanelHeaderCheckOut;
 	
-	private JTextField textFieldOwnerStart;
-	private JTextField textFieldOwnerEnd;
-	private JTextField textFieldOwnerRoom;
+	public JTextField textFieldOwnerStart;
+	public JTextField textFieldOwnerEnd;
+	public JTextField textFieldOwnerRoom;
 	private JTable tableOwnerDetailed;
 	private JTable tableOwnerReservations;
 	private JTable tableOwnerRight;
@@ -89,23 +95,22 @@ public class InnReservations {
 	private TableColumnAdjuster tableOwnerRightTca;
 
 	
-	private class OwnerDetailedRowListenerTwo implements ListSelectionListener {
+	private class OwnerReservationRowListener implements ListSelectionListener {
 		public void valueChanged(ListSelectionEvent event) {
 			if (event.getValueIsAdjusting()) {
 				return;
 			}
-			int i = tableOwnerRight.getSelectionModel().getLeadSelectionIndex();
-			String start = textFieldOwnerStart.getText();
+			int i = tableOwnerReservations.getSelectionModel().getLeadSelectionIndex();
+			if (i < 0)
+				return;
 			
 			if (!tableExists("Reservations"))
 				return;
 			
-			//System.out.println(start);
-			//System.out.println(tableOwnerRight.getValueAt(i, 0));
 			String query = "SELECT * " +
 		                   "FROM Reservations " +
-					       "WHERE Room = '" + tableOwnerRight.getValueAt(i, 1) + "' AND " +
-					              "TO_DATE('" + start + "', 'DD-MON-YY') BETWEEN CheckIn AND CheckOut-1";
+					       "WHERE Code = " + tableOwnerReservations.getValueAt(i, 0);
+			System.out.println(query);
 			
 			Vector<String> tableColumns = new Vector<String>();
 			Vector<Vector<String>> tableData = new Vector<Vector<String>>();
@@ -151,17 +156,119 @@ public class InnReservations {
 				return;
 			}
 			int i = tableOwnerRight.getSelectionModel().getLeadSelectionIndex();
+			if (i < 0)
+				return;
 			String start = textFieldOwnerStart.getText();
 			String end = textFieldOwnerEnd.getText();
 
 			if (!tableExists("Reservations"))
 				return;
 
-			if (end.length() == 0) {
+			if (ownerMode == OwnerMode.OCCUPANCY) {
+				if (end.length() == 0) {
+					String query = "SELECT * " +
+							"FROM Reservations " +
+							"WHERE Room = '" + tableOwnerRight.getValueAt(i, 1) + "' AND " +
+							"TO_DATE('" + start + "', 'DD-MON-YY') BETWEEN CheckIn AND CheckOut-1";
+
+					Vector<String> tableColumns = new Vector<String>();
+					Vector<Vector<String>> tableData = new Vector<Vector<String>>();
+
+					try {
+						Statement s = conn.createStatement();
+						ResultSet rs = s.executeQuery(query);
+						ResultSetMetaData md = rs.getMetaData();
+						int columns = md.getColumnCount();
+
+						tableColumns.addElement("Attribute");
+						tableColumns.addElement("Value");
+
+						if (!rs.next()) return;
+
+						for (int i1 = 1; i1 <= columns; i1++) {
+							Vector<String> row = new Vector<String>(2);
+
+							row.addElement(md.getColumnName(i1));
+							row.addElement(rs.getString(i1));
+
+							tableData.addElement(row);
+						}
+
+					} catch (SQLException e) {
+						System.err.println(e);
+						e.printStackTrace();
+						System.exit(1);
+					}
+
+					tableOwnerDetailed.setModel(new DefaultTableModel(
+							tableData,
+							tableColumns
+							));
+
+					tableOwnerDetailedTca.adjustColumns();
+				}
+				else {
+					String query = "select Code, LastName " +
+							"from reservations " + 
+							"where room = ? and ((checkin <= to_date(?, 'DD-MON-YY') and " +
+							"checkout > to_date(?, 'DD-MON-YY')) or " +
+							"(checkin >= to_date(?, 'DD-MON-YY') and " +
+							"checkin < to_date(?, 'DD-MON-YY')) or " +
+							"(checkout < to_date(?, 'DD-MON-YY') and " +
+							"checkout > to_date(?, 'DD-MON-YY')))";
+
+					//String query = "SELECT Code, LastName " +
+					//		"FROM Reservations " +
+					//		"WHERE Room = '" + tableOwnerRight.getValueAt(i, 0) + "' AND " +
+					//		"TO_DATE('" + start + "', 'DD-MON-YY') BETWEEN CheckIn AND CheckOut-1";
+
+					Vector<String> tableColumns = new Vector<String>();
+					Vector<Vector<String>> tableData = new Vector<Vector<String>>();
+
+					try {
+						PreparedStatement erq = conn.prepareStatement(query);
+						erq.setString(2, start);
+						erq.setString(4, start);
+						erq.setString(7, start);
+						erq.setString(3, end);
+						erq.setString(5, end);
+						erq.setString(6, end);
+						erq.setString(1, tableOwnerRight.getValueAt(i, 0).toString());
+						ResultSet rs = erq.executeQuery();
+
+						ResultSetMetaData md = rs.getMetaData();
+						int columns = md.getColumnCount();
+
+						for (int i1 = 1; i1 <= columns; i1++)
+							tableColumns.addElement(md.getColumnName(i1));
+
+						while (rs.next()) {
+							Vector<String> row = new Vector<String>(columns);
+
+							for (int i1 = 1; i1 <= columns; i1++)
+								row.addElement(rs.getString(i1));
+
+							tableData.addElement(row);
+						}
+
+					} catch (SQLException e) {
+						System.err.println(e);
+						e.printStackTrace();
+						System.exit(1);
+					}
+
+					tableOwnerReservations.setModel(new DefaultTableModel(
+							tableData,
+							tableColumns
+							));
+
+					tableOwnerReservationsTca.adjustColumns();
+				}
+			}
+			else if (ownerMode == OwnerMode.RESERVATIONS) {
 				String query = "SELECT * " +
 						"FROM Reservations " +
-						"WHERE Room = '" + tableOwnerRight.getValueAt(i, 1) + "' AND " +
-						"TO_DATE('" + start + "', 'DD-MON-YY') BETWEEN CheckIn AND CheckOut-1";
+						"WHERE Code = " + tableOwnerRight.getValueAt(i, 0);
 
 				Vector<String> tableColumns = new Vector<String>();
 				Vector<Vector<String>> tableData = new Vector<Vector<String>>();
@@ -196,51 +303,99 @@ public class InnReservations {
 						tableData,
 						tableColumns
 						));
-
 				tableOwnerDetailedTca.adjustColumns();
 			}
-			else {
-				String query = "select Code, LastName " +
-                        "from reservations " + 
-                        "where room = ? and ((checkin <= to_date(?, 'DD-MON-YY') and " +
-                        "checkout > to_date(?, 'DD-MON-YY')) or " +
-                        "(checkin >= to_date(?, 'DD-MON-YY') and " +
-                        "checkin < to_date(?, 'DD-MON-YY')) or " +
-                        "(checkout < to_date(?, 'DD-MON-YY') and " +
-                        "checkout > to_date(?, 'DD-MON-YY')))";
+			else if (ownerMode == OwnerMode.ROOMS) {
+				if (!tableExists("Rooms"))
+					return;
 				
-				//String query = "SELECT Code, LastName " +
-				//		"FROM Reservations " +
-				//		"WHERE Room = '" + tableOwnerRight.getValueAt(i, 0) + "' AND " +
-				//		"TO_DATE('" + start + "', 'DD-MON-YY') BETWEEN CheckIn AND CheckOut-1";
-
+				String query = "SELECT * " +
+			                   "FROM Rooms " +
+						       "WHERE RoomId = '" + tableOwnerRight.getValueAt(i, 0) + "'";
+				
 				Vector<String> tableColumns = new Vector<String>();
 				Vector<Vector<String>> tableData = new Vector<Vector<String>>();
+				
+				try {
+					Statement s = conn.createStatement();
+					ResultSet rs = s.executeQuery(query);
+					ResultSetMetaData md = rs.getMetaData();
+			        int columns = md.getColumnCount();
+			        
+		            tableColumns.addElement("Attribute");
+		            tableColumns.addElement("Value");
+			        
+					rs.next();
+					
+					for (int i1 = 1; i1 <= columns; i1++) {
+						Vector<String> row = new Vector<String>(2);
+						
+						row.addElement(md.getColumnName(i1));
+		                row.addElement(rs.getString(i1));
+
+		                tableData.addElement(row);
+					}
+					
+					Vector<String> row = new Vector<String>(2);
+					row.addElement("NightsOccupied");
+					row.addElement(getNightsOccupied((String) tableOwnerRight.getValueAt(i, 0)));
+					tableData.addElement(row);
+					
+					row = new Vector<String>(2);
+					row.addElement("PercentOccupied");
+					row.addElement(getPercentOccupied((String) tableOwnerRight.getValueAt(i, 0)));
+					tableData.addElement(row);
+					
+					row = new Vector<String>(2);
+					row.addElement("TotalRevenue");
+					row.addElement(getTotalRevenue((String) tableOwnerRight.getValueAt(i, 0)));
+					tableData.addElement(row);
+					
+					row = new Vector<String>(2);
+					row.addElement("PercentRevenue");
+					row.addElement(getPercentRevenue((String) tableOwnerRight.getValueAt(i, 0)));
+					tableData.addElement(row);
+				} catch (SQLException e) {
+					System.err.println(e);
+					System.exit(1);
+				}
+				
+				tableOwnerDetailed.setModel(new DefaultTableModel(
+						tableData,
+						tableColumns
+					));
+				
+				tableOwnerDetailedTca.adjustColumns();
+				
+				if (!tableExists("Reservations"))
+					return;
+				
+				query = "select Code, LastName " +
+						"from reservations " + 
+						"where room = ? " +
+						"ORDER BY CheckIn";
+
+			    tableColumns = new Vector<String>();
+				tableData = new Vector<Vector<String>>();
 
 				try {
 					PreparedStatement erq = conn.prepareStatement(query);
-			        erq.setString(2, start);
-			        erq.setString(4, start);
-			        erq.setString(7, start);
-			        erq.setString(3, end);
-			        erq.setString(5, end);
-			        erq.setString(6, end);
-			        erq.setString(1, tableOwnerRight.getValueAt(i, 0).toString());
-			        ResultSet rs = erq.executeQuery();
-			        
+					erq.setString(1, tableOwnerRight.getValueAt(i, 0).toString());
+					ResultSet rs = erq.executeQuery();
+
 					ResultSetMetaData md = rs.getMetaData();
 					int columns = md.getColumnCount();
 
 					for (int i1 = 1; i1 <= columns; i1++)
 						tableColumns.addElement(md.getColumnName(i1));
-			        
+
 					while (rs.next()) {
 						Vector<String> row = new Vector<String>(columns);
 
-		                for (int i1 = 1; i1 <= columns; i1++)
-		                    row.addElement(rs.getString(i1));
+						for (int i1 = 1; i1 <= columns; i1++)
+							row.addElement(rs.getString(i1));
 
-		                tableData.addElement(row);
+						tableData.addElement(row);
 					}
 
 				} catch (SQLException e) {
@@ -256,8 +411,6 @@ public class InnReservations {
 
 				tableOwnerReservationsTca.adjustColumns();
 			}
-			
-
 		}
 	}
 	
@@ -1008,6 +1161,111 @@ public class InnReservations {
 		});
 	}
 
+	public String getPercentRevenue(String roomid) {
+		String query =  "SELECT l / total " +
+				"FROM (SELECT SUM(((CASE " +
+				"                      WHEN CheckOut>TO_DATE('01-JAN-11') THEN TO_DATE('01-JAN-11') " +
+				"                      ELSE CheckOut " +
+				"                  END)-CheckIn) * rate) AS l " +
+				"      FROM reservations " +
+				"      WHERE Room = '" + roomid + "') a, " +
+				"     (SELECT SUM(((CASE " +
+				"                      WHEN CheckOut>TO_DATE('01-JAN-11') THEN TO_DATE('01-JAN-11') " +
+				"                      ELSE CheckOut " +
+				"                  END)-CheckIn) * rate) AS total " +
+				"      FROM reservations) b";
+
+		try {
+			Statement s = conn.createStatement();
+			ResultSet rs = s.executeQuery(query);
+
+			if (!rs.next())
+				return "";
+
+			float r = rs.getFloat(1);
+
+			return String.format("%.2f%%", r * 100);
+		} catch (SQLException e) {
+			System.err.println(e);
+			e.printStackTrace();
+		}
+
+		return "";
+	}
+
+	public String getTotalRevenue(String roomid) {
+		String query = "SELECT SUM(((CASE " +
+						"        WHEN CheckOut > TO_DATE('01-JAN-11') THEN TO_DATE('01-JAN-11') " +
+						"        ELSE CheckOut " +
+						"    END) - CheckIn) * Rate) " +
+						"FROM Reservations " +
+						"WHERE Room = '" + roomid + "'";
+
+		try {
+			Statement s = conn.createStatement();
+			ResultSet rs = s.executeQuery(query);
+
+			if (!rs.next())
+				return "";
+
+			float r = rs.getFloat(1);
+
+			return String.format("%.2f", r);
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+		return "";
+	}
+
+	public String getPercentOccupied(String roomid) {
+		String query = "SELECT SUM((CASE " +
+						"        WHEN CheckOut > TO_DATE('01-JAN-11') THEN TO_DATE('01-JAN-11') " +
+						"        ELSE CheckOut " +
+						"    END) - CheckIn) / 365 " +
+						"FROM Reservations " +
+						"WHERE Room = '" + roomid + "'";
+
+		try {
+			Statement s = conn.createStatement();
+			ResultSet rs = s.executeQuery(query);
+
+			if (!rs.next())
+				return "";
+
+			float r = rs.getFloat(1);
+			
+			return String.format("%.2f%%", r * 100);
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+		return "";
+	}
+
+	public String getNightsOccupied(String roomid) {
+		String query = "SELECT SUM((CASE " +
+				        "        WHEN CheckOut > TO_DATE('01-JAN-11') THEN TO_DATE('01-JAN-11') " +
+				        "        ELSE CheckOut " +
+				        "    END) - CheckIn) " +
+				        "FROM Reservations " +
+				        "WHERE Room = '" + roomid + "'";
+		
+		try {
+			Statement s = conn.createStatement();
+			ResultSet rs = s.executeQuery(query);
+			
+			if (!rs.next())
+				return "";
+			
+			return rs.getString(1);
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		
+		return "";
+	}
+
 	private static int getReservationCount() {
 		String query = "SELECT COUNT(*) " +
 	                   "FROM Reservations";
@@ -1326,7 +1584,7 @@ public class InnReservations {
 		ownerPanel.add(panelOwnerLeft, BorderLayout.WEST);
 		panelOwnerLeft.setLayout(new FormLayout(new ColumnSpec[] {
 				FormFactory.LABEL_COMPONENT_GAP_COLSPEC,
-				ColumnSpec.decode("172px:grow"),
+				FormFactory.MIN_COLSPEC,
 				FormFactory.RELATED_GAP_COLSPEC,},
 			new RowSpec[] {
 				FormFactory.LINE_GAP_ROWSPEC,
@@ -1341,7 +1599,7 @@ public class InnReservations {
 				FormFactory.RELATED_GAP_ROWSPEC,
 				FormFactory.DEFAULT_ROWSPEC,
 				FormFactory.RELATED_GAP_ROWSPEC,
-				FormFactory.DEFAULT_ROWSPEC,
+				FormFactory.MIN_ROWSPEC,
 				FormFactory.RELATED_GAP_ROWSPEC,
 				FormFactory.DEFAULT_ROWSPEC,
 				FormFactory.RELATED_GAP_ROWSPEC,
@@ -1380,6 +1638,8 @@ public class InnReservations {
 		JButton btnOccupancy = new JButton("Occupancy");
 		btnOccupancy.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
+				ownerMode = OwnerMode.OCCUPANCY;
+				
 				String start = textFieldOwnerStart.getText();
 				String end = textFieldOwnerEnd.getText();
 				
@@ -1388,14 +1648,62 @@ public class InnReservations {
 		});
 		panelOwnerLeft.add(btnOccupancy, "2, 11");
 		
-		JButton btnRevenue = new JButton("Revenue");
-		panelOwnerLeft.add(btnRevenue, "2, 13");
+		JPanel panel = new JPanel();
+		panelOwnerLeft.add(panel, "2, 13, fill, fill");
+		panel.setLayout(new BorderLayout(0, 0));
 		
-		JButton btnReservations = new JButton("Reservations");
-		panelOwnerLeft.add(btnReservations, "2, 15");
+		JButton btnOwnerReservations = new JButton("Reservations");
+		btnOwnerReservations.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				displayReservationStats();
+			}
+		});
+		btnOwnerReservations.setHorizontalAlignment(SwingConstants.LEFT);
+		panel.add(btnOwnerReservations, BorderLayout.WEST);
 		
-		JButton btnRooms = new JButton("Rooms");
-		panelOwnerLeft.add(btnRooms, "2, 17");
+		JButton btnOwnerDays = new JButton("Days");
+		btnOwnerDays.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				displayDayStats();
+			}
+		});
+		panel.add(btnOwnerDays, BorderLayout.CENTER);
+		
+		JButton btnOwnerRevenue = new JButton("Revenue");
+		btnOwnerRevenue.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				displayRevenueStats();
+			}
+		});
+		panel.add(btnOwnerRevenue, BorderLayout.EAST);
+		
+		JButton btnOwnerViewReservations = new JButton("View Reservations");
+		btnOwnerViewReservations.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				ownerMode = OwnerMode.RESERVATIONS;
+				
+				String startDate = textFieldOwnerStart.getText();
+				String endDate = textFieldOwnerEnd.getText();
+				String room = textFieldOwnerRoom.getText();
+				
+				startDate = startDate.length() > 0 ? startDate : null;
+				endDate = endDate.length() > 0 ? endDate : null;
+				room = room.length() > 0 ? room : null;
+				
+				browseReservationsQuery(startDate, endDate, room);
+			}
+		});
+		panelOwnerLeft.add(btnOwnerViewReservations, "2, 15");
+		
+		JButton btnOwnerViewRooms = new JButton("View Rooms");
+		btnOwnerViewRooms.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				ownerMode = OwnerMode.ROOMS;
+				
+				browseRoomsQuery();
+			}
+		});
+		panelOwnerLeft.add(btnOwnerViewRooms, "2, 17");
 		
 		JLabel lblOwnerDetailedInformation = new JLabel("Detailed Information");
 		panelOwnerLeft.add(lblOwnerDetailedInformation, "2, 20");
@@ -1417,6 +1725,8 @@ public class InnReservations {
 		tableOwnerReservationsTca = new TableColumnAdjuster(tableOwnerReservations);
 		scrollPaneOwnerReservations.setViewportView(tableOwnerReservations);
 		
+		tableOwnerReservations.getSelectionModel().addListSelectionListener(new OwnerReservationRowListener());
+		
 		JPanel panelOwnerRight = new JPanel();
 		ownerPanel.add(panelOwnerRight, BorderLayout.CENTER);
 		panelOwnerRight.setLayout(new BorderLayout(0, 0));
@@ -1425,6 +1735,7 @@ public class InnReservations {
 		panelOwnerRight.add(scrollPaneOwnerRight, BorderLayout.CENTER);
 		
 		tableOwnerRight = new JTable();
+		tableOwnerRight.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 		tableOwnerRightTca = new TableColumnAdjuster(tableOwnerRight);
 		scrollPaneOwnerRight.setViewportView(tableOwnerRight);
 		
@@ -1524,6 +1835,59 @@ public class InnReservations {
 		adminTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 		adminTca = new TableColumnAdjuster(adminTable);
 		scrollPane.setViewportView(adminTable);
+	}
+
+	protected void browseRoomsQuery() {
+		if (!tableExists("Rooms"))
+			return;
+		
+		Vector<String> tableColumns = new Vector<String>();
+		Vector<Vector<String>> tableData = new Vector<Vector<String>>();
+		
+		String query = "SELECT RoomId, roomName FROM Rooms";
+		
+		Statement s;
+		try {
+			s = conn.createStatement();
+			ResultSet rs = s.executeQuery(query);
+			ResultSetMetaData md = rs.getMetaData();
+	        int columns = md.getColumnCount();
+	        
+	        for (int i = 1; i <= columns; i++)
+	        	tableColumns.addElement(md.getColumnName(i));
+	        
+			while (rs.next()) {
+				Vector<String> row = new Vector<String>(columns);
+
+                for (int i = 1; i <= columns; i++)
+                    row.addElement(rs.getString(i));
+
+                tableData.addElement(row);
+			}
+			s.close();
+		} catch (SQLException e) {
+			System.err.println(e);
+			System.exit(1);
+		}
+		
+		tableOwnerRight.setModel(new DefaultTableModel(
+				tableData,
+				tableColumns
+			));
+		
+		tableOwnerRightTca.adjustColumns();
+	}
+
+	protected void displayReservationStats() {
+		reservationMonthByMonthQuery("counts");
+	}
+	
+	protected void displayDayStats() {
+		reservationMonthByMonthQuery("days");
+	}
+	
+	protected void displayRevenueStats() {
+		reservationMonthByMonthQuery("revenue");
 	}
 
 	protected void displayReservations() {
@@ -2161,7 +2525,7 @@ public class InnReservations {
 	        "(select roomname, sum(checkout - checkin) as Total " +
 	        "from reservations, rooms " +
 	        "where rooms.roomid = reservations.room " +
-	        "group by roomname));";
+	        "group by roomname))";
 	    String reservationCountsQuery = "select *  " +
 	        "from " +
 	        "((select roomname, count(*) as JAN " +
@@ -2227,7 +2591,7 @@ public class InnReservations {
 	        "(select roomname, count(*) as Total " +
 	        "from reservations, rooms " +
 	        "where rooms.roomid = reservations.room " +
-	        "group by roomname));";
+	        "group by roomname))";
 
 	    String revenuesQuery = "select *  " +
 	        "from " +
@@ -2294,7 +2658,11 @@ public class InnReservations {
 	        "(select roomname, sum(rate * (checkout - checkin)) as Total " +
 	        "from reservations, rooms " +
 	        "where rooms.roomid = reservations.room " +
-	        "group by roomname));";
+	        "group by roomname))";
+	    
+	    Vector<Vector<String>> table = new Vector<Vector<String>>();
+	    Vector<String> columnHeaders = new Vector<String>();
+	    
 	    try {
 	        String queryToExecute;
 	        switch(query) {
@@ -2311,10 +2679,10 @@ public class InnReservations {
 	        }
 	        Statement s = conn.createStatement();
 	        ResultSet results = s.executeQuery(queryToExecute);
-	        Vector<Vector<String>> table = new Vector<Vector<String>>();
+	       
 	        String[] headers = {"Roomname", "JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL",
 	                    "AUG", "SEP", "OCT", "NOV", "DEC", "TOTAL"};
-	        Vector<String> columnHeaders = new Vector<String>();
+	        
 	        columnHeaders.addAll(Arrays.asList(headers));
 
 
@@ -2322,15 +2690,32 @@ public class InnReservations {
 	        boolean hasNext = results.next();
 	        while(hasNext) {
 	            Vector<String> row = new Vector<String>();
-	            for(int column = 1; column < 14; column++) {
+	            for(int column = 1; column < 15; column++) {
 	                row.addElement(results.getString(column));
 	            }
 	            table.addElement(row);
 	            hasNext = results.next();
 	        }        
+	        
+	        Vector<String> totals = new Vector<String>();
+	        totals.addElement("Totals");
+	        for(int column = 1; column < 14; column++) {
+	        	Double sum = 0.0;
+	        	for (int row = 0; row < table.size(); row++)
+	        		sum += Double.parseDouble(table.get(row).get(column));
+	        	totals.addElement(sum.toString());
+	        }
+	        table.addElement(totals);
 	    } catch (SQLException e) {
 	        System.out.println("Reservation counts query failed.");
 	    }
+	    
+	    tableOwnerRight.setModel(new DefaultTableModel(
+	    		table,
+	    		columnHeaders
+			));
+		
+	    tableOwnerRightTca.adjustColumns();
 
 	}
 
@@ -2338,26 +2723,36 @@ public class InnReservations {
 	/* Handles OR-3 */
 	private void browseReservationsQuery(String startDate, String endDate, String room) {
 	    String queryToExecute;
+	    
+	    if (room == null && startDate == null)
+	    	return;
+	    
+	    if (startDate != null && endDate == null)
+	    	return;
+	    
 	    if(room == null) {
-	        queryToExecute = "select code, checkin, checkout " +
+	        queryToExecute = "select code, lastname, to_char(checkin, 'DD-MON-YY'), to_char(checkout, 'DD-MON-YY') " +
 	            "from reservations " +
-	            "where checkin >= to_date('?' ,'DD-MON-YY') and " +
-	            "checkin < to_date('?', 'DD-MON-YY')";
+	            "where checkin >= to_date(? ,'DD-MON-YY') and " +
+	            "checkin < to_date(?, 'DD-MON-YY')";
 	    } else {
 	        if(startDate == null) {
-	            queryToExecute = "select code, checkin, checkout " +
+	            queryToExecute = "select code, lastname, to_char(checkin, 'DD-MON-YY'), to_char(checkout, 'DD-MON-YY') " +
 	                "from reservations " +
-	                "where room = '?'";
+	                "where room = ?";
 	        }
 	        else {
-	            queryToExecute = "select code, checkin, checkout " +
+	            queryToExecute = "select code, lastname, to_char(checkin, 'DD-MON-YY'), to_char(checkout, 'DD-MON-YY') " +
 	                "from reservations " +
-	                "where checkin >= to_date('start' ,'DD-MON-YY') and " + 
-	                "checkin < to_date('end', 'DD-MON-YY') and " + 
-	                "room = '?'";
+	                "where checkin >= to_date(? ,'DD-MON-YY') and " + 
+	                "checkin < to_date(?, 'DD-MON-YY') and " + 
+	                "room = ?";
 	        }
 	    }
 
+	    Vector<String> columnHeaders = new Vector<String>();
+	    Vector<Vector<String>> table = new Vector<Vector<String>>();
+	    
 	    try {
 	        PreparedStatement ps = conn.prepareStatement(queryToExecute);
 	        if(room == null) {
@@ -2371,23 +2766,32 @@ public class InnReservations {
 	            ps.setString(3, room);
 	        }
 	        ResultSet results = ps.executeQuery();
-	        String[] headers = {"Room, CheckIn, CheckOut"};
-	        Vector<String> columnHeaders = new Vector<String>();
+	        String[] headers = {"Room", "LastName", "CheckIn", "CheckOut"};
+	        
 	        columnHeaders.addAll(Arrays.asList(headers));
 	        
-	        Vector<Vector<String>> table = new Vector<Vector<String>>();
 	        boolean hasNext = results.next();
 	        while (hasNext) {
 	            Vector<String> row = new Vector<String>();
 	            row.addElement(results.getString(1));
 	            row.addElement(results.getString(2));
 	            row.addElement(results.getString(3));
-	            table.add(row);
+	            row.addElement(results.getString(4));
+	            table.addElement(row);
 	            hasNext = results.next();
 	        }
 	    } catch (SQLException e) {
+	    	System.err.println(e);
+	    	e.printStackTrace();
 	        System.out.println("Reservations query failed.");
 	    }
+	    
+	    tableOwnerRight.setModel(new DefaultTableModel(
+	    		table,
+				columnHeaders
+			));
+		
+		tableOwnerRightTca.adjustColumns();
 	}
 
 	private int totalNightsOccupied(String room) {

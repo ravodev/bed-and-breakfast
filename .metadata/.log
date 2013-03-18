@@ -2277,3 +2277,6 @@ Caused by: org.eclipse.core.commands.NotHandledException: There is no handler to
 	at java.lang.reflect.Method.invoke(Unknown Source)
 	at org.eclipse.e4.core.internal.di.MethodRequestor.execute(MethodRequestor.java:56)
 	... 49 more
+
+!ENTRY org.eclipse.core.resources 4 376 2013-03-17 16:59:24.049
+!MESSAGE Marker id 1649 not found.
